@@ -1,0 +1,51 @@
+name: logmanagement
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: logmanagement
+      POSTGRES_USER: logmanagement
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Run scripts/init-env.ps1 or scripts/init-env.sh first}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U logmanagement -d logmanagement']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgres://logmanagement:${DB_PASSWORD}@postgres:5432/logmanagement?sslmode=disable
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Run init-env first}
+      VIEWER_PASSWORD: ${VIEWER_PASSWORD:?Run init-env first}
+      API_KEY_A: ${API_KEY_A:?Run init-env first}
+      API_KEY_B: ${API_KEY_B:?Run init-env first}
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:8080}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      RETENTION_DAYS: ${RETENTION_DAYS:-7}
+      SYSLOG_TENANT: demo-a
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - '${SYSLOG_BIND:-127.0.0.1}:5514:5514/udp'
+      - '${SYSLOG_BIND:-127.0.0.1}:5514:5514/tcp'
+    healthcheck:
+      test: [CMD, wget, -q, --spider, 'http://127.0.0.1:3000/api/health']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    read_only: true
+    security_opt: [no-new-privileges:true]
+  frontend:
+    build: ./frontend
+    ports: ['${HTTP_BIND:-127.0.0.1}:8080:80']
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  postgres_data:

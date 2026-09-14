@@ -1,0 +1,1 @@
+{"Records":[{"eventName":"CreateUser","eventSource":"iam.amazonaws.com","awsRegion":"ap-southeast-1","recipientAccountId":"123456789012","userIdentity":{"userName":"admin"},"sourceIPAddress":"198.51.100.11"}]}
