@@ -1,48 +1,48 @@
-﻿# Sample สำหรับสองบริษัท
+# Samples
 
 ไฟล์ในโฟลเดอร์นี้เป็นข้อมูลสังเคราะห์สำหรับ demo สอง tenant หรือสองบริษัท
 
-| Tenant | บริษัทสมมติ | Admin | Viewer | Credential สำหรับ ingest |
+| Tenant | บริษัทสมมติ | Admin | Viewer | API key |
 |---|---|---|---|---|
-| demo-a | Atlas Technology | admin.a@demo.local | viewer.a@demo.local | API_KEY_A |
-| demo-b | Beacon Retail | admin.b@demo.local | viewer.b@demo.local | API_KEY_B |
+| `demo-a` | Atlas Technology | `admin.a@demo.local` | `viewer.a@demo.local` | `API_KEY_A` |
+| `demo-b` | Beacon Retail | `admin.b@demo.local` | `viewer.b@demo.local` | `API_KEY_B` |
 
 Admin ทั้งสองใช้ `ADMIN_PASSWORD` จาก `.env` ที่ root project ส่วน Viewer ทั้งสองใช้ `VIEWER_PASSWORD`
 
-Admin แต่ละคนอยู่เฉพาะ tenant ของตัวเอง field company เป็น label เพื่อให้ sample อ่านง่ายเท่านั้น การแยกสิทธิ์จริง enforce จาก tenant ของ credential ไม่ได้เชื่อ label ใน payload
+Admin และ Viewer ถูกผูกกับ tenant ของตัวเองเท่านั้น field `company` ใน sample เป็น label ให้อ่านง่าย ไม่ใช่ตัวกำหนดสิทธิ์จริง
 
 ## โครงสร้างไฟล์
 
-แต่ละ tenant folder มีไฟล์:
+แต่ละ tenant folder มีไฟล์หลัก
 
-- `events.json`: 7 events ครอบคลุม API, Firewall, Network, CrowdStrike, AWS, Microsoft 365 และ Windows/AD
-- `abnormal.json`: 5 failed logins จาก IP เดียวกัน ใช้ trigger default alert rule แบบ 5 ครั้งใน 5 นาที
+- `events.json`: events ปกติสำหรับหลาย source เช่น API, Firewall, Network, AWS, Microsoft 365 และ AD
+- `abnormal.json`: failed login 5 รายการจาก IP เดียวกัน ใช้ trigger alert เงื่อนไข 5 ครั้งภายใน 5 นาที
 
-Atlas ใช้:
+ตัวอย่าง tenant A
 
-- IP ช่วง `10.10.x.x`
-- host prefix `atlas-*`
-- user domain `atlas.example`
-- cloud account `111111111111`
+```text
+samples/tenant-a/events.json
+samples/tenant-a/abnormal.json
+```
 
-Beacon ใช้:
+ตัวอย่าง tenant B
 
-- IP ช่วง `10.20.x.x`
-- host prefix `beacon-*`
-- user domain `beacon.example`
-- cloud account `222222222222`
+```text
+samples/tenant-b/events.json
+samples/tenant-b/abnormal.json
+```
 
 ข้อมูลทั้งหมดเป็น synthetic data และตั้งใจ omit timestamp เพื่อให้ระบบใช้ ingestion time ปัจจุบัน
 
 ## วิธี seed ข้อมูลสองบริษัท
 
-ต้องเปิด stack อยู่ก่อน จากนั้นรันจาก root project:
+ต้องเปิด stack อยู่ก่อน จากนั้นรันจาก root project
 
 ```powershell
-python samples/seed_companies.py
+py samples/seed_companies.py
 ```
 
-script จะ:
+script จะทำงานดังนี้
 
 1. อ่าน `.env` ที่ root project
 2. ส่ง events ของแต่ละ tenant ด้วย API key ของ tenant นั้น
@@ -50,27 +50,49 @@ script จะ:
 
 script เป็นแบบ append data ถ้ารันซ้ำจะเพิ่ม batch ใหม่ ไม่ลบ logs หรือ credentials เดิม
 
-ถ้า alert rule อยู่ใน cooldown การส่ง failed-login ซ้ำอาจใช้ alert เดิม ถ้า rule ถูกเปลี่ยนหรือปิดไว้อาจไม่ trigger
+## ส่ง sample ผ่าน HTTP API
 
-## Upload ผ่าน UI แบบ manual
+```powershell
+py samples/post_logs.py --file samples/tenant-a/events.json
+py samples/post_logs.py --file samples/tenant-a/abnormal.json
+```
 
-ถ้าจะ upload เองผ่าน UI ให้ใช้ Admin ของ tenant ที่ตรงกับไฟล์:
+`post_logs.py` อ่าน API key จาก `.env` ได้ จึงไม่ต้องกรอก key เองถ้าใช้ค่า default
+
+## ส่ง Syslog sample
+
+UDP
+
+```powershell
+py samples/send_syslog.py --host localhost --port 5514
+```
+
+TCP
+
+```powershell
+py samples/send_syslog.py --tcp --host localhost --port 5514
+```
+
+ถ้าส่งไป SaaS demo ให้ใช้ host
+
+```text
+logdisk.malaysiawest.cloudapp.azure.com
+```
+
+## Upload ผ่าน UI
+
+ถ้าจะ upload เองผ่าน UI ให้ใช้ Admin ของ tenant ที่ตรงกับไฟล์
 
 - `demo-a`: ใช้ `admin.a@demo.local`
 - `demo-b`: ใช้ `admin.b@demo.local`
 
 Viewer upload ไม่ได้
 
-ถ้าเปลี่ยนแค่ field `tenant` ใน payload แต่ใช้ credential ของอีก tenant ระบบจะ reject
+ถ้าแก้ payload ให้มี `tenant` ไม่ตรงกับ credential ระบบจะ reject
 
 ## วิธีตรวจใน UI
 
-เปิด Log explorer ด้วย Viewer ที่ตรงกับ tenant แล้วเลือก:
-
-- All sources
-- Last 24 hours
-
-จากนั้น search คำเหล่านี้ได้:
+เปิด Log Explorer ด้วย user ของ tenant ที่ต้องการ แล้วเลือกช่วงเวลา Last 24 hours จากนั้นค้นหาคำเหล่านี้ได้
 
 ```text
 company-demo
@@ -78,6 +100,10 @@ Atlas Technology
 Beacon Retail
 ```
 
-sidebar ยังแสดง tenant ID เดิม เช่น `demo-a` / `demo-b` sample นี้ไม่ได้ rename tenant records
+ถ้า login เป็น Viewer A ต้องเห็นเฉพาะข้อมูลของ `demo-a` และ Viewer B ต้องเห็นเฉพาะข้อมูลของ `demo-b`
 
-generic samples และ Nginx live feed อาจอยู่ใน `demo-a` ด้วยถ้าไม่ได้ filter แยก
+## Alert sample
+
+`abnormal.json` ใช้ทดสอบ alert ปัจจุบัน ซึ่งแจ้งเตือนเมื่อเจอ log field ที่ rule กำหนดครบ 5 ครั้งภายใน 5 นาที
+
+ถ้า alert rule อยู่ใน cooldown การส่ง failed-login ซ้ำอาจใช้ alert เดิม หรือถ้า rule ถูกเปลี่ยน/ปิดไว้ อาจไม่ trigger

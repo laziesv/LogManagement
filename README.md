@@ -1,114 +1,190 @@
 # Logdesk — Log Management Demo
 
-ระบบต้นแบบสำหรับบททดสอบ Full-Stack Intern: **React + TypeScript + Tailwind CSS**, **Go + Fiber v3**, **PostgreSQL 17 + JSONB**
+Logdesk เป็นระบบจัดการ log แบบ multi tenant สำหรับงาน Full Stack Developer Intern Assignment ระบบนี้รับ log ได้หลายช่องทาง, normalize field กลาง, ค้นหา log, แสดง dashboard, แจ้งเตือน และทดสอบ RBAC ได้
 
-## เริ่มใช้งานบน Windows
+Tech stack หลัก
 
-ต้องเปิด Docker Desktop ให้ Engine พร้อมก่อน (โหมด Linux containers)
+- Frontend: React, TypeScript, Vite, Tailwind CSS, Lucide icons
+- Backend: Go, Fiber
+- Database: PostgreSQL 17 + JSONB
+- Deployment: Docker Compose, Nginx, Azure VM, Certbot HTTPS
+- CI/CD: GitHub Actions + SSH deploy
+
+## เริ่มใช้งานแบบ Appliance
+
+บน Windows ให้เปิด Docker Desktop ก่อน แล้วรันจาก root project
 
 ```powershell
-cd "D:\My Works\LogManagement"
 .\run.ps1
 ```
 
-เปิด http://localhost:8080 แล้วเข้าสู่ระบบด้วย `admin.a@demo.local` และค่า `ADMIN_PASSWORD` ใน `.env` ซึ่งสคริปต์สร้างให้แบบสุ่ม อย่าเผยแพร่ไฟล์ `.env`
+ถ้า PowerShell block script ให้ใช้คำสั่งนี้แทน
 
-บน Ubuntu/Linux ใช้ `sh run.sh` (ต้องมี Docker Compose และ openssl)
+```powershell
+powershell -ExecutionPolicy Bypass -File .\run.ps1
+```
 
-## บัญชีเดโม
+หรือใช้ Docker Compose โดยตรง
 
-| Email | Role | Tenant | Password from .env |
+```powershell
+docker compose up --build -d
+```
+
+เปิดเว็บที่
+
+```text
+http://localhost:8080
+```
+
+บน Linux หรือ Azure VM ใช้
+
+```sh
+sh run.sh
+```
+
+## SaaS demo
+
+ระบบ demo deploy บน Azure VM และเข้าใช้งานผ่าน HTTPS ได้ที่
+
+```text
+https://logdisk.malaysiawest.cloudapp.azure.com
+```
+
+Syslog public demo ใช้ port `5514` ทั้ง TCP และ UDP ถ้าเปิด firewall / Azure NSG แล้ว
+
+## บัญชี demo
+
+| Email | Role | Tenant | Password |
 |---|---|---|---|
-| admin.a@demo.local | Admin | demo-a | ADMIN_PASSWORD |
-| admin.b@demo.local | Admin | demo-b | ADMIN_PASSWORD |
-| viewer.a@demo.local | Viewer | demo-a | VIEWER_PASSWORD |
-| viewer.b@demo.local | Viewer | demo-b | VIEWER_PASSWORD |
+| `admin.a@demo.local` | Admin | `demo-a` | `ADMIN_PASSWORD` จาก `.env` |
+| `admin.b@demo.local` | Admin | `demo-b` | `ADMIN_PASSWORD` จาก `.env` |
+| `viewer.a@demo.local` | Viewer | `demo-a` | `VIEWER_PASSWORD` จาก `.env` |
+| `viewer.b@demo.local` | Viewer | `demo-b` | `VIEWER_PASSWORD` จาก `.env` |
 
-Admin จัดการได้เฉพาะ tenant ของตน Viewer ดูข้อมูลได้แต่ ingest/แก้กฎ/acknowledge ไม่ได้ API key สำหรับส่งข้อมูลผูกกับ tenant โดยตรง และไม่มีสิทธิ์อ่านข้อมูล
+Admin เป็น admin เฉพาะ tenant ของตัวเอง ไม่ใช่ super admin ข้าม tenant ส่วน Viewer อ่านข้อมูลได้เฉพาะ tenant ของตัวเอง
 
-Tenant ไม่ได้ถูกเลือกจาก UI หรือรับจาก header ที่ผู้ใช้กำหนดเองสำหรับการอ่านข้อมูล Backend enforce tenant จากตัวตนที่ยืนยันแล้วเท่านั้น: session cookie หลัง login สำหรับ UI/API แบบผู้ใช้ และ `X-API-Key` สำหรับ ingestion แบบ machine-to-machine ถ้า request ส่ง `tenant` มาไม่ตรงกับ session/API key ระบบจะ reject หรือไม่ให้ query ข้าม tenant
+## Tenant enforcement
 
-## ลองระบบ
+ระบบไม่ให้ผู้ใช้เลือก tenant เองจาก UI เพื่อป้องกันการข้าม tenant
 
-1. ไป **Data sources → Send demo batch** เพื่อส่ง 12 events จริงเข้าฐานข้อมูล (รวม failed login 5 ครั้ง)
-2. ไป **Overview** ดูกราฟ/Top IP/User/Event และ **Log explorer** เพื่อค้นหาและเปิดรายละเอียด
-3. ไป **Alerts** ดูกฎ failed login (ค่าเริ่มต้น 5 ครั้งใน 5 นาที) และ acknowledge
-4. Import `samples/aws.json`, `samples/m365.json`, `samples/ad.json` หรือ `samples/events.json`
-5. ทดสอบ Syslog ด้วย `python samples/send_syslog.py` และ `python samples/send_syslog.py --tcp`; Overview และ Log explorer refresh อัตโนมัติทุก 10 วินาที และยังมีปุ่ม Refresh สำหรับกดเอง
-6. ออกจากระบบแล้วเข้า Viewer A/B เพื่อตรวจ tenant isolation
+| ช่องทาง | วิธีกำหนด tenant |
+|---|---|
+| Browser UI | tenant จาก session หลัง login |
+| HTTP ingest | tenant จาก `X-API-Key` |
+| Syslog | tenant จาก `SYSLOG_TENANT` |
 
-ทุกไฟล์ sample เป็นข้อมูลสังเคราะห์ ไม่มี timestamp จึงใช้เวลารับเข้า หากส่ง timestamp เก่าต้องเลือก Custom range ใน UI กราฟใช้ UTC; ตารางใช้ timezone ของเบราว์เซอร์
+ถ้า payload ส่ง `tenant` มาไม่ตรงกับ credential ระบบจะ reject หรือไม่ให้ query ข้าม tenant
+
+## วิธี demo ระบบ
+
+1. เปิดเว็บและ login เป็น `admin.a@demo.local`
+2. ไปหน้า Data Sources แล้วส่ง demo batch หรือ import sample
+3. เปิด Overview เพื่อดู Top N, Timeline และ filter ตาม source/time
+4. เปิด Log Explorer เพื่อค้นหา log
+5. ส่ง abnormal logs 5 รายการเพื่อ trigger alert
+6. เปิด Alerts เพื่อดู alert และ acknowledge
+7. login เป็น Viewer A/B เพื่อตรวจว่าเห็นเฉพาะ tenant ของตัวเอง
+8. ยิง Syslog ด้วย TCP/UDP แล้วดู log ใน UI ภายในประมาณ 1 นาที
+
+Alert ปัจจุบันมีเงื่อนไขหลักเดียว คือพบ log field ที่ rule กำหนดครบ **5 ครั้งภายใน 5 นาที** ภายใน tenant เดียวกัน เช่น failed login จาก IP เดียวกัน 5 ครั้ง
+
+## ช่องทาง ingest
+
+- HTTP JSON: `POST /ingest` หรือ `POST /api/ingest` พร้อม `X-API-Key`
+- File batch: import JSON sample ผ่าน UI หรือ API
+- Syslog TCP/UDP: port `5514`
+
+ตัวอย่างส่ง Syslog
+
+```powershell
+py samples/send_syslog.py --host localhost --port 5514
+py samples/send_syslog.py --tcp --host localhost --port 5514
+```
+
+ตัวอย่างส่ง HTTP logs
+
+```powershell
+py samples/post_logs.py --file samples/tenant-a/events.json
+```
 
 ## API หลัก
 
 | Method / path | หน้าที่ | สิทธิ์ |
 |---|---|---|
-| GET /api/health | ตรวจ API + DB | ไม่ต้อง login |
-| POST /api/auth/login | email/password → HttpOnly session cookie | ไม่ต้อง login |
-| GET /api/auth/me | ผู้ใช้ปัจจุบัน | Session |
-| POST /api/auth/logout | ยกเลิก session | Session |
-| POST /ingest หรือ /api/ingest | JSON object/array/AWS Records หรือ multipart field `file` | Admin session / X-API-Key |
-| GET /api/logs | ค้นหาและแบ่งหน้า | Session |
-| GET /api/stats | จำนวน/กราฟ/Top N | Session |
-| GET /api/alerts | ล่าสุด 100 alerts ของ tenant | Session |
-| POST /api/alerts/:id/acknowledge | รับทราบ alert | Admin |
-| GET /api/rule | ดูกฎ | Session |
-| PUT /api/rule | ตั้ง enabled/threshold/window_minutes | Admin |
+| `GET /api/health` | ตรวจ backend และ database | public |
+| `POST /api/auth/login` | login และสร้าง session cookie | public |
+| `GET /api/auth/me` | ดู session ปัจจุบัน | session |
+| `POST /api/auth/logout` | logout | session |
+| `POST /ingest` หรือ `/api/ingest` | ingest JSON/file batch | Admin session หรือ API key |
+| `GET /api/logs` | ค้นหา log | session |
+| `GET /api/stats` | dashboard stats | session |
+| `GET /api/alerts` | ดู alerts ล่าสุดของ tenant | session |
+| `POST /api/alerts/:id/acknowledge` | acknowledge alert | Admin |
+| `GET /api/rule` | ดู alert rule | session |
+| `PUT /api/rule` | แก้ alert rule | Admin |
 
-Query: `q`, `source`, `from`, `to` (RFC3339), `limit` (1–100), `offset` (0–100000) ช่วงเวลามากสุด 31 วัน ค่าเริ่มต้น 24 ชั่วโมง `tenant` ถ้าส่งต้องตรงกับบัญชี ข้าม tenant ไม่ได้
+Cookie-authenticated writes ต้องมี `Origin` ตรงกับ `APP_ORIGIN` ส่วน script/API automation ควรใช้ `X-API-Key`
 
-Cookie-authenticated writes ต้องส่ง `Origin` ตรงกับ `APP_ORIGIN`; browser ทำให้อัตโนมัติ API scripts ใช้ `X-API-Key` โดยไม่ต้องใช้ cookie
-
-## โครงโปรเจกต์
+## โครงสร้างโปรเจกต์
 
 ```text
-backend/cmd/server/       entry point หลักของ backend
-backend/internal/config/  โหลดและ validate environment configuration
-backend/internal/bootstrap/ init ระบบและ graceful shutdown
-backend/internal/collector/ ตัวรับ Syslog UDP/TCP
-backend/internal/retention/ worker ลบข้อมูลเก่าตาม retention
-backend/internal/router/  ลงทะเบียน HTTP endpoints
-backend/internal/handler/ handlers แยกตาม feature
-backend/internal/middleware/ auth, origin checks และ error responses
-backend/internal/model/   data structures ที่ใช้ร่วมกัน
-backend/internal/normalize/ parse และ normalize log
-backend/internal/repository/ PostgreSQL และ schema
-frontend/src/             React UI
-samples/                  JSON samples และ Python senders
-tests/                    smoke/integration tests สำหรับ stack ที่รันอยู่
-scripts/                  สคริปต์สร้าง environment แบบสุ่ม
-deploy/                   ตัวอย่าง Nginx HTTPS
-docs/                     สถาปัตยกรรม, คู่มือติดตั้ง และ Postman collection
+backend/                  Go Fiber backend
+frontend/                 React frontend
+samples/                  sample logs และ sender scripts
+ingest/                   คำอธิบายช่องทาง ingest
+tests/                    live/smoke test scripts
+docs/                     คู่มือ setup, architecture, Postman, CI/CD
+deploy/                   ตัวอย่าง Nginx HTTPS config
+scripts/                  script สร้าง .env
+.github/workflows/        GitHub Actions CI/CD
 ```
 
 ## ทดสอบ
+
+Backend
 
 ```powershell
 cd backend
 go test ./...
 go vet ./...
-cd ../frontend
-npm ci
-npm run build
-cd ..
-python tests/smoke.py
 ```
 
-Smoke test ต้องมี stack รันอยู่และ `.env` จริง จะเพิ่มข้อมูลทดสอบใน demo tenants และทดสอบ alert โดยคืนค่ากฎเดิมหลังจบ
+Frontend
 
-เอกสารส่งมอบหลักอยู่ที่ [สถาปัตยกรรม](docs/architecture.md), [ติดตั้ง Appliance](docs/setup_appliance.md), [ติดตั้ง SaaS](docs/setup_saas.md) และ [CI/CD](docs/cicd.md)
+```powershell
+cd frontend
+npm ci
+npm test
+npm run build
+```
 
-Postman/Insomnia collection สำหรับทดสอบ API อยู่ที่ [docs/postman_collection.json](docs/postman_collection.json) และวิธีใช้อยู่ที่ [docs/postman.md](docs/postman.md) หลัง import ให้ตั้งค่า `admin_password`, `api_key_a` และ `api_key_b` จาก `.env`
+Live tests ต้องเปิด stack ก่อน
 
-## ขอบเขตเวอร์ชันนี้
+```powershell
+py tests/smoke.py
+py tests/normalization_live.py
+py tests/retention_live.py
+```
 
-เป็น local MVP ที่มี ingestion, normalization, search, dashboard, RBAC, tenant isolation, UI alerts และ retention พร้อมโค้ดติดตั้ง Cloud แต่ **ยังไม่มี URL Cloud หรือวิดีโอเดโม** ไม่มีการเชื่อมบัญชี CrowdStrike/AWS/M365 ของจริง
+ถ้าเครื่องไม่มี `python` command ให้ใช้ Python Launcher `py` หรือ path Python ที่ติดตั้งไว้
 
-Syslog รองรับ RFC3164 / key=value และ newline-framed TCP โดยใช้ tenant ที่ตั้งบน collector; ยังไม่มี TLS Syslog, octet-counted framing, durable queue, retry/dedup หรือ full-text index สำหรับค้นคำใน raw จึงต้องวัดประสิทธิภาพตามปริมาณงานก่อนใช้จริง
+## เอกสารสำคัญ
 
-## ที่มาของตัวเลือก
+- [Architecture](docs/architecture.md)
+- [Setup Appliance](docs/setup_appliance.md)
+- [Setup SaaS](docs/setup_saas.md)
+- [Postman guide](docs/postman.md)
+- [CI/CD](docs/cicd.md)
+- [Postman collection](docs/postman_collection.json)
 
-- Fiber v3 ต้องใช้ Go 1.25+: https://docs.gofiber.io/
-- Vite: https://vite.dev/guide/
-- PostgreSQL JSONB/indexing: https://www.postgresql.org/docs/17/datatype-json.html
-- Docker Compose บนเซิร์ฟเวอร์เดียว: https://docs.docker.com/compose/how-tos/production/
+## ขอบเขตปัจจุบัน
+
+ระบบนี้เป็น demo/MVP สำหรับ assignment มี ingestion, normalization, search, dashboard, RBAC, tenant isolation, UI alert, retention, SaaS HTTPS และ CI/CD แล้ว
+
+ข้อจำกัดที่ยังมี
+
+- Alert แจ้งเตือนผ่าน UI เท่านั้น ยังไม่มี email/webhook
+- Syslog ยังไม่มี authentication และยังไม่มี TLS Syslog
+- UDP เป็น best effort ไม่มี acknowledgement
+- ยังไม่มี durable queue, retry, deduplication หรือ benchmark production load
+- Sample logs เป็น synthetic data ไม่ได้เชื่อม AWS/M365/AD จริง
