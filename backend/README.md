@@ -1,23 +1,52 @@
-# Go Fiber backend
+# Backend Go Fiber
 
-Go 1.25+. Run `go test ./...` and `go vet ./...`.
+ต้องใช้ Go 1.25+  
+คำสั่งตรวจพื้นฐาน:
 
-`cmd/server` only loads configuration, receives OS signals and calls `bootstrap.Run`.
+```sh
+go test ./...
+go vet ./...
+```
 
-- `internal/config`: environment defaults and validation.
-- `internal/bootstrap`: database initialization, dependency wiring, HTTP startup and graceful shutdown.
-- `internal/collector`: UDP/TCP Syslog listeners and connection lifecycle.
-- `internal/retention`: cleanup worker that runs immediately on startup and then every 1 minute in the current demo/test configuration.
+`cmd/server` เป็น entry point ขนาดเล็ก ทำหน้าที่โหลด config, รับ OS signals และเรียก `bootstrap.Run`
 
-- `internal/router`: Fiber server setup and the endpoint table in `routes.go`.
-- `internal/handler`: named HTTP handlers, grouped by auth, ingest, logs, alerts and health.
-- `internal/middleware`: authentication, Admin checks, ingest authorization, Origin checks and error handling.
-- `internal/model`: shared data structures and JSON contracts only; no Fiber or SQL dependencies.
-- `internal/normalize`: provider mapping, Syslog normalization and JSON batch decoding.
-- `internal/repository`: Store interface, PostgreSQL implementation and embedded schema.
+## โครงสร้าง package
 
-Dependency flow: `bootstrap → router → handler/middleware → repository → model`; handlers and collector use `normalize → model`. Routes keep the existing URLs and middleware ordering. Tests under `router` exercise public HTTP behavior; normalization tests live with `normalize`.
+- `internal/config`: โหลดค่า environment, default และ validation
+- `internal/bootstrap`: init database, wiring dependencies, start HTTP และ graceful shutdown
+- `internal/collector`: UDP/TCP Syslog listeners และ connection lifecycle
+- `internal/retention`: cleanup worker ที่รันทันทีตอน startup และหลังจากนั้นทุก 1 นาทีใน demo/test config ปัจจุบัน
+- `internal/router`: ตั้งค่า Fiber server และ route table ใน `routes.go`
+- `internal/handler`: HTTP handlers แยกตาม feature เช่น auth, ingest, logs, alerts, health
+- `internal/middleware`: authentication, Admin check, ingest authorization, Origin check และ error handling
+- `internal/model`: shared data structures และ JSON contracts ไม่มี Fiber/SQL dependency
+- `internal/normalize`: provider mapping, Syslog normalization และ JSON batch decoding
+- `internal/repository`: Store interface, PostgreSQL implementation และ embedded schema
 
-Use root Docker Compose for startup, or set the environment documented in `../docs/setup_appliance.md` and run `go run ./cmd/server`.
+## ลำดับ dependency
 
-The schema is idempotent initial bootstrap, not a versioned migration framework. Future schema changes need explicit migrations. Startup inserts missing demo accounts; it never silently rotates existing credentials.
+```text
+bootstrap → router → handler/middleware → repository → model
+```
+
+handlers และ collector ใช้:
+
+```text
+normalize → model
+```
+
+routes คง URL และ middleware ordering ไว้ชัดเจน Tests ใต้ `router` ตรวจ public HTTP behavior ส่วน normalization tests อยู่กับ package `normalize`
+
+## การรัน
+
+ใช้ Docker Compose จาก root project เป็นหลัก หรือถ้าจะรัน backend ตรง ๆ ให้ตั้ง environment ตาม `../docs/setup_appliance.md` แล้วรัน:
+
+```sh
+go run ./cmd/server
+```
+
+## Schema ฐานข้อมูล
+
+schema เป็น idempotent bootstrap ไม่ใช่ migration framework แบบ versioned ถ้ามี schema change ในอนาคตควรทำ migration แยก
+
+ตอน startup ระบบจะ insert demo accounts/tenants ที่ยังไม่มีอยู่เท่านั้น และจะไม่ rotate credentials เดิมแบบเงียบ ๆ

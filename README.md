@@ -62,23 +62,23 @@ Cookie-authenticated writes ต้องส่ง `Origin` ตรงกับ `A
 ## โครงโปรเจกต์
 
 ```text
-backend/cmd/server/       Small executable entry point
-backend/internal/config/  Environment configuration
-backend/internal/bootstrap/ Startup and shutdown
-backend/internal/collector/ UDP/TCP Syslog receiver
-backend/internal/retention/ Cleanup worker
-backend/internal/router/  HTTP endpoint registration
-backend/internal/handler/ Request handlers by feature
-backend/internal/middleware/ Auth, Origin checks, error responses
-backend/internal/model/   Shared data structures
-backend/internal/normalize/ Log parsing and normalization
-backend/internal/repository/ PostgreSQL and schema
+backend/cmd/server/       entry point หลักของ backend
+backend/internal/config/  โหลดและ validate environment configuration
+backend/internal/bootstrap/ init ระบบและ graceful shutdown
+backend/internal/collector/ ตัวรับ Syslog UDP/TCP
+backend/internal/retention/ worker ลบข้อมูลเก่าตาม retention
+backend/internal/router/  ลงทะเบียน HTTP endpoints
+backend/internal/handler/ handlers แยกตาม feature
+backend/internal/middleware/ auth, origin checks และ error responses
+backend/internal/model/   data structures ที่ใช้ร่วมกัน
+backend/internal/normalize/ parse และ normalize log
+backend/internal/repository/ PostgreSQL และ schema
 frontend/src/             React UI
-samples/                  JSON samples + Python senders
-tests/                    Running-stack integration smoke test
-scripts/                  Random environment initialization
-deploy/                   HTTPS Nginx example
-docs/                     Architecture, setup, acceptance checklist
+samples/                  JSON samples และ Python senders
+tests/                    smoke/integration tests สำหรับ stack ที่รันอยู่
+scripts/                  สคริปต์สร้าง environment แบบสุ่ม
+deploy/                   ตัวอย่าง Nginx HTTPS
+docs/                     สถาปัตยกรรม, คู่มือติดตั้ง และ Postman collection
 ```
 
 ## ทดสอบ
@@ -96,7 +96,9 @@ python tests/smoke.py
 
 Smoke test ต้องมี stack รันอยู่และ `.env` จริง จะเพิ่มข้อมูลทดสอบใน demo tenants และทดสอบ alert โดยคืนค่ากฎเดิมหลังจบ
 
-ดู [สถานะการตรวจ](docs/verification.md), [สถาปัตยกรรม](docs/architecture.md), [ติดตั้ง Appliance](docs/setup_appliance.md), [ติดตั้ง SaaS](docs/setup_saas.md) และ [เช็กลิสต์ส่งงาน](docs/acceptance.md)
+เอกสารส่งมอบหลักอยู่ที่ [สถาปัตยกรรม](docs/architecture.md), [ติดตั้ง Appliance](docs/setup_appliance.md) และ [ติดตั้ง SaaS](docs/setup_saas.md)
+
+Postman/Insomnia collection สำหรับทดสอบ API อยู่ที่ [docs/postman_collection.json](docs/postman_collection.json) และวิธีใช้อยู่ที่ [docs/postman.md](docs/postman.md) หลัง import ให้ตั้งค่า `admin_password`, `api_key_a` และ `api_key_b` จาก `.env`
 
 ## ขอบเขตเวอร์ชันนี้
 

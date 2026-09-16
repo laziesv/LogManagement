@@ -1,35 +1,39 @@
-# React frontend
+﻿# React frontend
 
-React + Vite + TypeScript + Tailwind CSS, with Lucide icons. All application data comes from the Go API; there is no mock fallback.
+Frontend ใช้ React + Vite + TypeScript + Tailwind CSS และ Lucide icons ข้อมูลทั้งหมดมาจาก Go API ไม่มี mock fallback ใน production flow
 
-## Structure
+## โครงสร้าง
 
 ```text
 src/
-  App.tsx                Session gate: loading, login, or workspace
-  main.tsx               React entry point
-  layouts/               Workspace shell and page selection
-  pages/                 Login, Overview, Logs, Alerts, Sources
+  App.tsx                ตัวกลางเลือกสถานะ loading, login หรือ workspace
+  main.tsx               จุดเริ่มต้น React
+  layouts/               โครงหน้า workspace และการเลือกหน้า
+  pages/                 หน้า Login, Overview, Logs, Alerts, Sources
   components/
-    common/              Brand and empty state
-    layout/              Sidebar, topbar, header, notices, footer
-    dashboard/           Timeline and rankings
-    logs/                Filters, table, event detail dialog
-  hooks/                 Session and workspace state/actions
-  contexts/              Typed workspace context shared by pages/components
-  services/              HTTP client and auth/log/alert API functions
-  types/                 Shared domain and navigation types
-  constants/             Navigation metadata and source names
-  utils/                 Formatting, errors and synthetic sample generation
-  styles/                Shared stylesheet
-tests/                   Page-render regression checks
+    common/              brand และ empty state
+    layout/              sidebar, topbar, header, notices, footer
+    dashboard/           timeline และ ranking charts
+    logs/                filters, table, event detail dialog
+  hooks/                 session และ workspace state/actions
+  contexts/              workspace context ที่ใช้ร่วมกันระหว่าง pages/components
+  services/              HTTP client และฟังก์ชันเรียก auth/log/alert API
+  types/                 shared domain และ navigation types
+  constants/             navigation metadata และ source names
+  utils/                 formatting, errors และ synthetic sample generation
+  styles/                stylesheet กลาง
+ tests/                  regression checks สำหรับ page rendering
 ```
 
-`useAuth` owns the session check. `Workspace` calls `useWorkspace` once and provides its state through `WorkspaceProvider`. Switching pages preserves the selected filters and loaded data. Pages render state and call actions; the services layer owns endpoints and request payloads. `services/client.ts` handles cookies, JSON and API errors.
+`useAuth` รับผิดชอบการตรวจ session ส่วน `Workspace` เรียก `useWorkspace` ครั้งเดียวแล้วส่ง state ผ่าน `WorkspaceProvider` การสลับหน้าไม่ล้าง filter และข้อมูลที่โหลดไว้ Pages มีหน้าที่ render state และเรียก actions ส่วน services layer ดูแล endpoints และ payloads
 
-API requests run from hooks/services, not from layout components. File upload and sample ingestion are workspace actions. `utils/samples.ts` is only used by the explicit demo buttons. The API remains responsible for authorization; hiding Viewer buttons is not a security boundary.
+`services/client.ts` จัดการ cookies, JSON และ API errors
 
-## Commands
+API requests อยู่ใน hooks/services ไม่อยู่ใน layout components การ upload file และ sample ingestion เป็น workspace actions ส่วน `utils/samples.ts` ใช้เฉพาะปุ่ม demo ที่ user กดเองเท่านั้น
+
+Backend ยังเป็นจุด enforce authorization จริง การซ่อนปุ่มของ Viewer ใน UI เป็นแค่ UX ไม่ใช่ security boundary
+
+## คำสั่งที่ใช้บ่อย
 
 ```sh
 npm ci
@@ -38,8 +42,14 @@ npm test
 npm run build
 ```
 
-Vite binds 127.0.0.1:5173 by default and proxies /api and /ingest to 127.0.0.1:3000. Set backend APP_ORIGIN=http://127.0.0.1:5173 during local development. Production Nginx serves built assets and proxies the same routes.
+Vite bind ที่ `127.0.0.1:5173` เป็นค่าเริ่มต้น และ proxy `/api` กับ `/ingest` ไป `127.0.0.1:3000` ระหว่าง local development ให้ตั้ง backend:
 
-Tests use Node's built-in runner, TypeScript transpilation and React server rendering; no extra testing dependencies. They verify page rendering and Admin/Viewer controls. They do not replace browser interaction or live API integration tests.
+```text
+APP_ORIGIN=http://127.0.0.1:5173
+```
 
-This refactor keeps the existing local tab navigation, styling, endpoints and JSON formats. No new URL router or state-management library was introduced.
+Production ใช้ Nginx serve built assets และ proxy routes เดิม
+
+Tests ใช้ Node built-in runner, TypeScript transpilation และ React server rendering โดยไม่เพิ่ม testing dependency ใหม่ Tests ตรวจ page rendering และปุ่ม/สิทธิ์ Admin/Viewer แต่ไม่แทน browser interaction หรือ live API integration tests
+
+โครงนี้คง tab navigation, styling, endpoints และ JSON formats เดิมไว้ ไม่เพิ่ม URL router หรือ state-management library ใหม่

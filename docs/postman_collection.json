@@ -1,0 +1,295 @@
+{
+  "info": {
+    "_postman_id": "3d3bd315-bd40-4c94-9fd7-870834cc88df",
+    "name": "Logdesk Log Management Demo",
+    "description": "API examples for the Logdesk assignment demo. Set collection variables from .env before sending requests. Postman will keep the session cookie after Login as Admin A.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "admin_email",
+      "value": "admin.a@demo.local"
+    },
+    {
+      "key": "admin_password",
+      "value": "replace-with-ADMIN_PASSWORD-from-.env"
+    },
+    {
+      "key": "api_key_a",
+      "value": "replace-with-API_KEY_A-from-.env"
+    },
+    {
+      "key": "api_key_b",
+      "value": "replace-with-API_KEY_B-from-.env"
+    },
+    {
+      "key": "alert_id",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /api/health",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Session auth",
+      "item": [
+        {
+          "name": "Login as Admin A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/login",
+            "description": "Postman stores the HttpOnly session cookie returned by this request. Run this before session-protected requests."
+          }
+        },
+        {
+          "name": "Current user",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/auth/me"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/auth/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ingest with API key",
+      "item": [
+        {
+          "name": "POST /ingest single API log to tenant A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key_a}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source\": \"api\",\n  \"event_type\": \"postman_app_login_failed\",\n  \"user\": \"alice\",\n  \"ip\": \"203.0.113.7\",\n  \"reason\": \"wrong_password\"\n}"
+            },
+            "url": "{{base_url}}/ingest",
+            "description": "Uses API_KEY_A, so the event is stored in tenant demo-a."
+          }
+        },
+        {
+          "name": "POST /ingest batch to trigger alert",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key_a}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\"source\":\"api\",\"event_type\":\"login_failed\",\"ip\":\"203.0.113.77\",\"user\":\"alice\"},\n  {\"source\":\"api\",\"event_type\":\"login_failed\",\"ip\":\"203.0.113.77\",\"user\":\"bob\"},\n  {\"source\":\"api\",\"event_type\":\"login_failed\",\"ip\":\"203.0.113.77\",\"user\":\"carol\"},\n  {\"source\":\"api\",\"event_type\":\"login_failed\",\"ip\":\"203.0.113.77\",\"user\":\"dave\"},\n  {\"source\":\"api\",\"event_type\":\"login_failed\",\"ip\":\"203.0.113.77\",\"user\":\"erin\"}\n]"
+            },
+            "url": "{{base_url}}/ingest",
+            "description": "Default rule is 5 failed logins from the same source IP in 5 minutes."
+          }
+        },
+        {
+          "name": "POST /ingest tenant B example",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key_b}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source\": \"api\",\n  \"event_type\": \"tenant_b_postman_event\",\n  \"user\": \"beacon-user\",\n  \"ip\": \"198.51.100.20\"\n}"
+            },
+            "url": "{{base_url}}/ingest",
+            "description": "Uses API_KEY_B, so the event is stored in tenant demo-b."
+          }
+        },
+        {
+          "name": "POST /ingest mismatched tenant should fail",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key_a}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant\": \"demo-b\",\n  \"source\": \"api\",\n  \"event_type\": \"should_be_rejected\"\n}"
+            },
+            "url": "{{base_url}}/ingest",
+            "description": "API_KEY_A is bound to demo-a. Sending tenant demo-b is rejected to prevent cross-tenant writes."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Session-protected search and dashboard",
+      "item": [
+        {
+          "name": "GET /api/logs latest",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/logs?limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "logs"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Run Login as Admin A first so Postman sends the session cookie."
+          }
+        },
+        {
+          "name": "GET /api/logs search postman",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/logs?q=postman&limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "logs"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "postman"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /api/stats",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/stats"
+          }
+        },
+        {
+          "name": "GET /api/alerts",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/alerts"
+          }
+        },
+        {
+          "name": "GET /api/rule",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/rule"
+          }
+        },
+        {
+          "name": "PUT /api/rule",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enabled\": true,\n  \"threshold\": 5,\n  \"window_minutes\": 5\n}"
+            },
+            "url": "{{base_url}}/api/rule",
+            "description": "Admin session required."
+          }
+        },
+        {
+          "name": "POST /api/alerts/:id/acknowledge",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/alerts/{{alert_id}}/acknowledge",
+            "description": "Set alert_id from an item returned by GET /api/alerts. Admin session required."
+          }
+        },
+        {
+          "name": "GET /api/logs denied cross-tenant query",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/logs?tenant=demo-b",
+            "description": "When logged in as Admin A, this should return 403 because tenant scope comes from the session."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -9,6 +9,10 @@ function New-Secret([int]$Length = 24) {
   return ([BitConverter]::ToString($bytes)).Replace('-', '').ToLowerInvariant()
 }
 $lines = @(
+  'DB_HOST=postgres',
+  'DB_PORT=5432',
+  'DB_NAME=logmanagement',
+  'DB_USER=logmanagement',
   "DB_PASSWORD=$(New-Secret 24)",
   "ADMIN_PASSWORD=$(New-Secret 12)",
   "VIEWER_PASSWORD=$(New-Secret 12)",
@@ -18,7 +22,8 @@ $lines = @(
   'COOKIE_SECURE=false',
   'RETENTION_DAYS=7',
   'HTTP_BIND=127.0.0.1',
-  'SYSLOG_BIND=127.0.0.1'
+  'SYSLOG_BIND=127.0.0.1',
+  'SYSLOG_TENANT=demo-a'
 )
 [IO.File]::WriteAllLines($envPath, $lines)
 Write-Host 'Created .env with random credentials. Read ADMIN_PASSWORD in .env to sign in as admin.a@demo.local.'

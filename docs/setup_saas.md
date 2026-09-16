@@ -1,18 +1,69 @@
-# SaaS / Cloud deployment
+# การ deploy แบบ SaaS / Cloud
 
-Status: deployment instructions and HTTPS template are provided; no cloud resource, DNS record or public URL has been created.
+สถานะปัจจุบัน: repository มีขั้นตอน deploy และตัวอย่าง HTTPS Nginx config แล้ว แต่ยังไม่ได้สร้าง cloud resource, DNS record หรือ public URL จริง
 
-Use a VM with Ubuntu 22.04+, 4 vCPU, 8 GB RAM, 40 GB disk, Docker/Compose, host Nginx and a domain pointing to the VM. Keep the database and backend private.
+ใช้ VM เช่น Ubuntu 22.04+, 4 vCPU, 8 GB RAM, 40 GB disk พร้อม Docker/Compose, host Nginx และ domain ที่ชี้มาที่ VM ควรให้ database และ backend อยู่หลัง reverse proxy ไม่เปิดตรงสู่ public
 
-1. Copy the repository to the VM; run `sh scripts/init-env.sh`.
-2. Set APP_ORIGIN=https://YOUR_DOMAIN and COOKIE_SECURE=true in .env. Keep HTTP_BIND=127.0.0.1 and SYSLOG_BIND=127.0.0.1.
-3. Run `docker compose up --build -d` and verify localhost:8080/api/health.
-4. Obtain a TLS certificate for your domain using your chosen ACME client/issuer. Install host Nginx with the actual domain/certificate paths from deploy/nginx-tls.conf.example. Validate with `sudo nginx -t` before reloading.
-5. Expose 80/443 through the cloud firewall; restrict SSH to your trusted source. Do not expose database port 5432 or public Syslog.
-6. Visit https://YOUR_DOMAIN, log in and send a sample. Verify the session cookie has Secure and HttpOnly attributes. Check Viewer B cannot see demo-a logs. Tenant scope is taken from the session or API key, so users cannot switch tenants from the browser query string.
-7. Run `python tests/smoke.py` with the same root .env and HTTPS APP_ORIGIN. Standard CA validation stays enabled.
-8. Share only the public URL and intended demo-account credentials directly with the evaluator. Do not put secrets in Git or documentation.
+## ขั้นตอน
 
-For the assignment's self-signed option, provide certificate trust/import instructions to the evaluator. Do not disable TLS validation in the application or scripts. A publicly trusted certificate is easier for the evaluator.
+1. Copy repository ไปที่ VM แล้วรัน:
 
-Use backups for the PostgreSQL volume, restrict server access, and monitor disk capacity. This demo uses shared-table tenant isolation at the application layer and has not been load tested for production scale.
+   ```sh
+   sh scripts/init-env.sh
+   ```
+
+2. แก้ `.env`:
+
+   ```env
+   APP_ORIGIN=https://YOUR_DOMAIN
+   COOKIE_SECURE=true
+   HTTP_BIND=127.0.0.1
+   SYSLOG_BIND=127.0.0.1
+   ```
+
+3. Start services:
+
+   ```sh
+   docker compose up --build -d
+   curl http://localhost:8080/api/health
+   ```
+
+4. ขอ TLS certificate สำหรับ domain ด้วย ACME client/issuer ที่เลือก แล้วติดตั้ง host Nginx โดยใช้ `deploy/nginx-tls.conf.example` เป็น template แก้ domain และ certificate paths ให้ตรงเครื่องจริง
+
+5. ตรวจ config ก่อน reload:
+
+   ```sh
+   sudo nginx -t
+   sudo systemctl reload nginx
+   ```
+
+6. เปิด cloud firewall เฉพาะ 80/443 และจำกัด SSH ให้ trusted source อย่าเปิด PostgreSQL port 5432 หรือ public Syslog
+
+7. เปิด `https://YOUR_DOMAIN`, login และส่ง sample
+
+8. ตรวจว่า session cookie มี Secure และ HttpOnly attributes
+
+9. ตรวจว่า Viewer B ไม่เห็น logs ของ `demo-a`
+
+10. Tenant scope มาจาก session หรือ API key จึงไม่สามารถ switch tenant จาก browser query string ได้
+
+11. รัน smoke test ด้วย `.env` เดียวกันและ `APP_ORIGIN` แบบ HTTPS:
+
+    ```sh
+    python tests/smoke.py
+    ```
+
+12. ส่งเฉพาะ public URL และ demo credentials ให้ผู้ประเมินโดยตรง อย่าใส่ secrets ใน Git หรือเอกสาร
+
+## ใบรับรองแบบ self-signed
+
+โจทย์ยอมรับ self-signed certificate ถ้าอธิบายขั้นตอนชัดเจน แต่ควรเตรียมวิธี trust/import certificate ให้กรรมการ และไม่ควร disable TLS validation ใน application หรือ scripts
+
+ถ้าเป็นไปได้ ใช้ certificate ที่ browser trust อยู่แล้วจะทดสอบง่ายกว่า
+
+## ข้อควรระวัง
+
+- backup PostgreSQL volume
+- จำกัดสิทธิ์ SSH/server access
+- monitor disk capacity
+- demo นี้ใช้ shared-table tenant isolation ที่ application layer ยังไม่ได้ load test สำหรับ production scale

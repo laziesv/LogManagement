@@ -1,4 +1,4 @@
-# Architecture
+# สถาปัตยกรรม
 
 ```mermaid
 flowchart LR
@@ -17,38 +17,55 @@ flowchart LR
   Cleanup[Retention worker] --> DB
 ```
 
-## Design decisions
+## เหตุผลการออกแบบ
 
-- React is a client-side application built by Vite; all backend work stays in Go Fiber.
-- One backend binary hosts HTTP, bounded Syslog listeners and cleanup. No queue or distributed orchestration in the initial demo.
-- Shared Normalize function maps JSON providers into timestamp/tenant/source/event_type/severity/src_ip/user/host/action. Original content is preserved in raw; extra properties in fields JSONB.
-- AWS Records envelopes are unwrapped. API failed logins and AD 4625 map to `login_failed`. M365 Operation/UserId/ClientIP and AWS eventName/userIdentity/sourceIPAddress are mapped.
-- Missing timestamps use receive time; invalid timestamps, invalid severity/IP and mismatched tenant are rejected. RFC3164 time assumes UTC and infers year. Five-minute future tolerance accommodates modest clock skew.
-- All batch records are validated before the PostgreSQL transaction: one invalid record rejects the whole batch. Maximum 1,000 records and 2 MB.
-- PostgreSQL provides transactions, indexed tenant/time/source queries and JSONB for varying provider fields. Current substring search over raw is a scoped scan; GIN on fields supports future structured JSON queries, not the current substring search. Measure latency before changing storage.
+- Frontend เป็น React ที่ build ด้วย Vite ส่วน backend ใช้ Go Fiber
+- backend binary ตัวเดียวดูแล HTTP API, Syslog UDP/TCP listener และ retention cleanup เพื่อติดตั้งแบบ appliance ได้ง่าย
+- ฟังก์ชัน normalize ใช้ร่วมกันทั้ง HTTP ingest และ Syslog โดยแปลง provider ต่าง ๆ ให้มี field กลาง เช่น `timestamp`, `tenant`, `source`, `event_type`, `severity`, `src_ip`, `user`, `host`, `action`
+- payload เดิมถูกเก็บใน `raw` และ field เสริมถูกเก็บใน `fields` แบบ JSONB
+- AWS `Records` envelope ถูกแกะออกก่อน normalize, API failed login และ AD 4625 map เป็น `login_failed`, M365/AWS field สำคัญถูก map เป็น field กลาง
+- ถ้า log ไม่มี timestamp จะใช้เวลารับเข้าแทน ถ้า timestamp, severity, IP หรือ tenant ไม่ถูกต้อง ระบบจะ reject
+- RFC3164 Syslog จะสมมติ timezone เป็น UTC และ infer ปีปัจจุบัน มี tolerance เวลาอนาคต 5 นาทีสำหรับ clock skew
+- batch ทุก record ถูก validate ก่อนเริ่ม transaction ถ้ามี record ใดผิด batch ทั้งก้อนจะไม่ถูก insert จำกัด 1,000 records และ 2 MB
+- PostgreSQL ใช้ transaction, index ตาม tenant/time/source และ JSONB สำหรับ field ที่ต่างกันตาม provider การค้นหาปัจจุบันเป็น substring search บน field ที่ scoped แล้ว เหมาะกับ demo ขนาดเล็ก
 
-## Tenant and authorization model
+## Tenant และสิทธิ์การใช้งาน
 
-- Tenant is enforced by the backend from a trusted session user or hashed API key, never from a user-selected UI filter or arbitrary header alone.
-- Browser reads use the tenant stored on the logged-in session. API ingestion uses the tenant bound to the `X-API-Key`. If a request includes a `tenant` value that does not match the authenticated tenant, the backend rejects it instead of switching scope.
-- Users, logs, API keys, rules and alerts have a tenant. All read/write repository calls scope by the authenticated tenant.
-- Admin is a tenant administrator, not a cross-tenant superuser. Viewer only reads. Data is in shared tables; dedicated table/index per tenant is not implemented.
-- Syslog is unauthenticated: its receiver has one fixed SYSLOG_TENANT. Bind it to loopback by default. For remote devices use a private network and source-IP firewall allowlist; deploy a separate collector mapping for another tenant.
-- Passwords use bcrypt. Random 256-bit session tokens expire after 8 hours; only SHA-256 hashes are stored. API keys are also hashed at rest.
-- Session cookies are HttpOnly/SameSite=Strict, Secure in cloud. Unsafe cookie requests require configured Origin. Auth endpoints are rate limited per connection IP; behind Nginx the limiter is conservatively shared unless a trusted-proxy setup is added.
-- Startup seed inserts missing demo users and tenants only. Changing environment variables does not rotate existing DB credentials. There is no password-reset or key-rotation UI yet.
+- backend enforce tenant จาก session user หรือ API key ที่ authenticate แล้วเท่านั้น ไม่ให้ user เลือก tenant จาก UI filter หรือ header เอง
+- การอ่านผ่าน browser ใช้ tenant จาก session หลัง login
+- การ ingest ผ่าน HTTP API ใช้ tenant ที่ผูกกับ `X-API-Key`
+- ถ้า request ส่งค่า `tenant` มาไม่ตรงกับ session/API key ระบบจะ reject ไม่สลับ tenant ให้
+- users, logs, API keys, rules และ alerts มี tenant กำกับ และ repository ทุกจุด query ด้วย tenant ที่ authenticate แล้ว
+- Admin เป็น admin เฉพาะ tenant ของตัวเอง ไม่ใช่ super admin ข้าม tenant
+- Viewer อ่านได้อย่างเดียว
+- ตาราง DB เป็น shared tables พร้อม tenant column ยังไม่ได้แยก table/index ต่อ tenant
+- Syslog ไม่มี authentication จึงใช้ `SYSLOG_TENANT` จาก config และ bind loopback เป็นค่าเริ่มต้น ถ้ารับจากอุปกรณ์จริงควรใช้ private network และ firewall allowlist
+- password ใช้ bcrypt, session token สุ่ม 256-bit อายุ 8 ชั่วโมง และเก็บเฉพาะ SHA-256 hash ใน DB
+- API key ถูก hash ก่อนเก็บใน DB เช่นกัน
+- session cookie เป็น HttpOnly/SameSite=Strict และใช้ Secure เมื่อ deploy แบบ HTTPS
+- request ที่แก้ข้อมูลด้วย cookie ต้องมี `Origin` ตรงกับ `APP_ORIGIN`
+- seed ตอน startup จะเพิ่มเฉพาะ tenant/user demo ที่ยังไม่มีอยู่ การเปลี่ยนค่า `.env` ภายหลังจะไม่ rotate password/API key เดิมใน DB
 
-## Alert semantics
+## Alert
 
-- Default: >=5 login_failed events with the same nonempty src_ip over the last 5 minutes of event time.
-- Both count and cooldown are tenant scoped. Ingestion locks the tenant row within the transaction so simultaneous batches cannot duplicate alerts inside the configured window.
-- Only newly ingested failures cause evaluation. Historical replays outside the current window do not trigger alerts; future timestamps do not count until they enter the window and another matching event arrives.
-- Alert is stored in the same transaction as the logs. UI lists alerts and lets Admin acknowledge them. No external message delivery is configured.
-- Rule changes apply to subsequent ingestion. Acknowledgement does not remove the cooldown.
+- กฎเริ่มต้นคือ `login_failed` จาก `src_ip` เดียวกันตั้งแต่ 5 ครั้งขึ้นไป ภายใน 5 นาที ตาม event time
+- การนับและ cooldown แยกตาม tenant
+- ตอน ingest จะ lock tenant row ใน transaction เพื่อลดโอกาสสร้าง alert ซ้ำจาก batch ที่เข้าพร้อมกัน
+- เฉพาะ log ที่ ingest ใหม่เท่านั้นที่ trigger alert; historical replay นอกหน้าต่างเวลาไม่ trigger
+- alert ถูกบันทึกใน transaction เดียวกับ logs
+- UI แสดง alert และให้ Admin acknowledge ได้
+- ยังไม่มี Email/Webhook delivery
+- การเปลี่ยน rule มีผลกับ ingestion ถัดไป
 
-## Retention and operational limits
+## Retention และข้อจำกัดเชิงปฏิบัติการ
 
-- Cleanup runs once on backend startup and then every 1 minute in the current demo/test configuration. It deletes logs older than RETENTION_DAYS, minimum 7, based on ingested_at. Historical samples are retained at least seven days after import. Cleanup also deletes expired sessions.
-- Alerts persist until a future explicit policy is added. Volume backups and monitoring are operator responsibilities.
-- UDP is best effort with no acknowledgement; no durable queue. TCP uses newline framing and a 64 KB maximum line. Connection count is capped at 32; idle connections expire after 30 seconds.
-- No deduplication: resend means another event. No production throughput or latency claim until real-load validation.
+- cleanup ทำงานทันที 1 รอบตอน backend start และหลังจากนั้นทุก 1 นาทีใน config สำหรับ demo/test ตอนนี้
+- retention ลบ logs ที่ `ingested_at` เก่ากว่า `RETENTION_DAYS` โดยขั้นต่ำคือ 7 วัน
+- ใช้ `ingested_at` แทน `timestamp` เพื่อให้ historical samples อยู่ในระบบอย่างน้อย 7 วันหลัง import
+- cleanup ลบ expired sessions ด้วย
+- alerts ยังไม่มี retention policy แยก
+- operator ต้องดูแล backup volume และ disk usage เอง
+- UDP เป็น best effort ไม่มี acknowledgement และไม่มี durable queue
+- TCP ใช้ newline framing จำกัด 64 KB ต่อ line จำกัด connection 32 และ idle timeout 30 วินาที
+- ไม่มี deduplication ถ้าส่งซ้ำจะเป็น event ใหม่
+- ยังไม่มี benchmark throughput/latency สำหรับ production load
