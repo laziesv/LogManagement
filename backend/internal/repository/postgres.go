@@ -48,7 +48,12 @@ func (p *Postgres) Seed(ctx context.Context, adminPass, viewerPass, keyA, keyB s
 			return err
 		}
 	}
-	for _, u := range []struct{ ID, Tenant, Email, Role, Pass string }{{"admin-a", "demo-a", "admin@demo.local", "admin", adminPass}, {"viewer-a", "demo-a", "viewer.a@demo.local", "viewer", viewerPass}, {"viewer-b", "demo-b", "viewer.b@demo.local", "viewer", viewerPass}} {
+	for _, u := range []struct{ ID, Tenant, Email, Role, Pass string }{
+		{"admin-a", "demo-a", "admin.a@demo.local", "admin", adminPass},
+		{"admin-b", "demo-b", "admin.b@demo.local", "admin", adminPass},
+		{"viewer-a", "demo-a", "viewer.a@demo.local", "viewer", viewerPass},
+		{"viewer-b", "demo-b", "viewer.b@demo.local", "viewer", viewerPass},
+	} {
 		hash, err := bcrypt.GenerateFromPassword([]byte(u.Pass), bcrypt.DefaultCost)
 		if err != nil {
 			return err
@@ -117,7 +122,7 @@ func (p *Postgres) Insert(ctx context.Context, events []model.Event) error {
 			_, err = tx.Exec(ctx, `INSERT INTO alerts(tenant,src_ip,event_count)
    SELECT $1,$2,count(*) FROM logs WHERE tenant=$1 AND src_ip=$2 AND event_type='login_failed'
    AND timestamp BETWEEN now()-($3 * interval '1 minute') AND now()
-   HAVING count(*) >= $4 AND NOT EXISTS(SELECT 1 FROM alerts WHERE tenant=$1 AND src_ip=$2 AND created_at>now()-($3 * interval '1 minute'))`, tenant, ip, rule.WindowMinutes, rule.Threshold)
+   HAVING count(*) >= $4 AND NOT EXISTS(SELECT 1 FROM alerts WHERE tenant=$1 AND src_ip=$2 AND status='open' AND created_at>now()-($3 * interval '1 minute'))`, tenant, ip, rule.WindowMinutes, rule.Threshold)
 			if err != nil {
 				return err
 			}
@@ -126,7 +131,7 @@ func (p *Postgres) Insert(ctx context.Context, events []model.Event) error {
 	return tx.Commit(ctx)
 }
 func conditions(f model.Filter) (string, []any) {
-	return `tenant=$1 AND timestamp >= $2 AND timestamp <= $3 AND ($4='' OR source=$4) AND ($5='' OR strpos(lower(event_type||' '||src_ip||' '||username||' '||host||' '||raw::text),lower($5))>0)`, []any{f.Tenant, f.From, f.To, f.Source, f.Query}
+	return `tenant=$1 AND timestamp >= $2 AND timestamp <= $3 AND ($4='' OR source=$4) AND ($5='' OR strpos(lower(event_type||' '||src_ip||' '||username||' '||host||' '||fields::text||' '||raw::text),lower($5))>0)`, []any{f.Tenant, f.From, f.To, f.Source, f.Query}
 }
 func (p *Postgres) Logs(ctx context.Context, f model.Filter) ([]model.Event, int64, error) {
 	where, args := conditions(f)

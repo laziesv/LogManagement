@@ -9,6 +9,7 @@ export class APIError extends Error {
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`/api${path}`, {
     ...init,
+    cache: "no-store",
     credentials: "same-origin",
     headers: {
       ...(init.body instanceof FormData

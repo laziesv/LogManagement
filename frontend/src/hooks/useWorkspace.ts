@@ -7,7 +7,7 @@ import { logsApi } from "../services/logs";
 import type { Alert, LogEvent, Rule, Stats, User } from "../types/domain";
 import type { Tab } from "../types/navigation";
 import { errorText } from "../utils/errors";
-import { sample } from "../utils/samples";
+import { abnormalSamples, sample } from "../utils/samples";
 export function useWorkspace(user: User, onLogout: () => void) {
   const [tab, setTab] = useState<Tab>("overview"),
     [source, setSource] = useState(""),
@@ -31,11 +31,11 @@ export function useWorkspace(user: User, onLogout: () => void) {
   const fileInput = useRef<HTMLInputElement>(null),
     controller = useRef<AbortController | null>(null);
   const isAdmin = user.role === "admin";
-  const load = useCallback(async () => {
+  const load = useCallback(async (options?: { silent?: boolean }) => {
     controller.current?.abort();
     const ac = new AbortController();
     controller.current = ac;
-    setBusy(true);
+    if (!options?.silent) setBusy(true);
     setError("");
     const to = hours === "custom" ? new Date(customTo) : new Date(),
       from =
@@ -48,8 +48,10 @@ export function useWorkspace(user: User, onLogout: () => void) {
       from > to ||
       to.getTime() - from.getTime() > 31 * 86400000
     ) {
-      setError("Choose a valid time range of up to 31 days.");
-      setBusy(false);
+      if (!options?.silent) {
+        setError("Choose a valid time range of up to 31 days.");
+        setBusy(false);
+      }
       return;
     }
     const params = new URLSearchParams({
@@ -86,6 +88,10 @@ export function useWorkspace(user: User, onLogout: () => void) {
     void load();
     return () => controller.current?.abort();
   }, [load]);
+  useEffect(() => {
+    const id = window.setInterval(() => void load({ silent: true }), 10000);
+    return () => window.clearInterval(id);
+  }, [load]);
   async function action(fn: () => Promise<unknown>, message: string) {
     setActionBusy(true);
     setError("");
@@ -121,7 +127,19 @@ export function useWorkspace(user: User, onLogout: () => void) {
         ];
     void action(
       () => logsApi.ingest(records),
-      `${records.length} sample events ingested. Refresh uses the selected time range.`,
+      `${records.length} sample events ingested. Auto refresh uses the selected time range.`,
+    );
+  }
+
+  function demoAbnormal() {
+    if (!isAdmin || !rule?.enabled || actionBusy) return;
+    const used = new Set(alerts.map((alert) => alert.src_ip));
+    const ip = Array.from({ length: 254 }, (_, i) => `192.0.2.${i + 1}`)
+      .find((candidate) => !used.has(candidate))!;
+    const records = abnormalSamples(rule.threshold, ip);
+    void action(
+      () => logsApi.ingest(records),
+      `${records.length} suspicious login samples sent from ${ip}. Open Alerts to inspect the result.`,
     );
   }
 
@@ -184,6 +202,7 @@ export function useWorkspace(user: User, onLogout: () => void) {
     action,
     upload,
     demo,
+    demoAbnormal,
     logout,
     saveRule,
     acknowledge,

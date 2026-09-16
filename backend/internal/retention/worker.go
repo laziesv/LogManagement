@@ -11,9 +11,11 @@ type Cleaner interface {
 	Cleanup(context.Context, int) error
 }
 
-// Run blocks until cancellation. Cleanup runs immediately and then every hour.
+const interval = 1 * time.Minute
+
+// Run blocks until cancellation. Cleanup runs immediately and then every 1 minute.
 func Run(ctx context.Context, store Cleaner, days int) {
-	ticker := time.NewTicker(time.Hour)
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
 		if ctx.Err() != nil {

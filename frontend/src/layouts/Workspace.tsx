@@ -27,7 +27,7 @@ export function Workspace({
         <Sidebar />
         <main>
           <Topbar />
-          <div className="page">
+          <div className="page" key={state.tab}>
             <PageHeader />
             <Notifications />
             {(state.tab === "overview" || state.tab === "logs") && (

@@ -10,6 +10,19 @@ export function LogDetails({
   close: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const fields = event.fields ?? {};
+  const cloud = fields.cloud && typeof fields.cloud === "object" && !Array.isArray(fields.cloud)
+    ? fields.cloud as Record<string, unknown>
+    : {};
+  const extraFields: [string, unknown][] = [
+    ["Host", event.host], ["Action", event.action], ["Outcome", fields.outcome],
+    ["Vendor", fields.vendor], ["Product", fields.product],
+    ["Source port", fields.src_port], ["Destination IP", fields.dst_ip],
+    ["Destination port", fields.dst_port], ["Protocol", fields.protocol],
+    ["URL / path", fields.url], ["HTTP method", fields.http_method],
+    ["HTTP status", fields.status_code], ["Cloud account", cloud.account_id],
+    ["Cloud region", cloud.region], ["Cloud service", cloud.service],
+  ];
   useEffect(() => {
     const d = ref.current;
     d?.showModal();
@@ -46,6 +59,16 @@ export function LogDetails({
             <div key={k}>
               <dt>{k}</dt>
               <dd>{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <dl>
+          {extraFields.filter(([, value]) =>
+            (typeof value === "string" && value !== "") || typeof value === "number"
+          ).map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{String(value)}</dd>
             </div>
           ))}
         </dl>

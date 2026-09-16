@@ -5,12 +5,13 @@ import {
   Database,
   Plus,
   Upload,
+  ShieldAlert,
 } from "lucide-react";
 import { sources } from "../constants/sources";
 import { useWorkspaceContext } from "../contexts/WorkspaceContext";
 
 export function SourcesPage() {
-  const { actionBusy, fileInput, isAdmin, demo } = useWorkspaceContext();
+  const { actionBusy, fileInput, isAdmin, demo, demoAbnormal, rule } = useWorkspaceContext();
   return (
     <>
       <div className="source-banner">
@@ -33,6 +34,35 @@ export function SourcesPage() {
           </button>
         )}
       </div>
+      {isAdmin && (
+        <section className="card import-card" style={{ marginTop: 0, marginBottom: 22 }}>
+          <ShieldAlert size={28} />
+          <div>
+            <h2>Simulate suspicious logins</h2>
+            <p>
+              Send {rule?.threshold ?? 5} failed logins from one sample IP to test your alert rule.
+              {rule?.enabled
+                ? " Then open Alerts to inspect the notification."
+                : " Enable the failed-login rule in Alerts first."}
+            </p>
+          </div>
+          <button onClick={demoAbnormal} disabled={actionBusy || !rule?.enabled}>
+            <ShieldAlert size={16} />
+            Send abnormal sample
+          </button>
+        </section>
+      )}
+      <section className="card import-card" style={{ marginTop: 0, marginBottom: 22 }}>
+        <Database size={28} />
+        <div>
+          <h2>Real web access logs</h2>
+          <p>
+            Nginx keeps web access logs local during the demo, so refreshing the
+            website will not create new application logs.
+          </p>
+          <p>Use the Syslog UDP/TCP collector on port 5514 when you want to test live ingestion.</p>
+        </div>
+      </section>
       <div className="source-grid">
         {sources.map((s, i) => (
           <article className="card source-card" key={s}>

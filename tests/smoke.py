@@ -29,7 +29,7 @@ def login(email, password):
 
 request('/api/health')
 request('/api/logs', expected=401)
-admin = login('admin@demo.local', config['ADMIN_PASSWORD'])
+admin = login('admin.a@demo.local', config['ADMIN_PASSWORD'])
 viewer = login('viewer.a@demo.local', config['VIEWER_PASSWORD'])
 viewer_b = login('viewer.b@demo.local', config['VIEWER_PASSWORD'])
 stamp = datetime.datetime.now(datetime.timezone.utc).isoformat()

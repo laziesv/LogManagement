@@ -4,7 +4,7 @@ import { displayTime, number } from "../../utils/format";
 import { Empty } from "../common/Empty";
 
 export function LogTable() {
-  const { tab, setTab, offset, setOffset, logs, total, busy, setSelected } =
+  const { tab, setTab, offset, setOffset, logs, total, busy, updated, setSelected } =
     useWorkspaceContext();
   return (
     <section className="card log-card">
@@ -16,6 +16,13 @@ export function LogTable() {
           </h2>
           <p>Normalized logs across your selected sources</p>
         </div>
+        {tab === "logs" && (
+          <div className="live-refresh">
+            <span className="status-dot" />
+            Live refresh
+            {updated && <small>Last updated {updated}</small>}
+          </div>
+        )}
         {tab === "overview" && (
           <button className="text-button" onClick={() => setTab("logs")}>
             Explore all logs

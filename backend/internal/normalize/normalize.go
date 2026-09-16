@@ -81,10 +81,8 @@ func Normalize(raw json.RawMessage, tenant string, now time.Time) (model.Event, 
 	if identity, ok := m["userIdentity"].(map[string]any); ok && e.User == "" {
 		e.User = value(identity, "userName", "arn")
 	}
-	if source == "aws" {
-		if _, exists := m["cloud"]; !exists {
-			m["cloud"] = map[string]any{"region": m["awsRegion"], "service": m["eventSource"], "account_id": m["recipientAccountId"]}
-		}
+	if err := normalizeFields(&e); err != nil {
+		return model.Event{}, err
 	}
 	return e, nil
 }
@@ -115,6 +113,18 @@ func NormalizeSyslog(line, tenant string, now time.Time) (model.Event, error) {
 			m["@timestamp"] = stamp.Format(time.RFC3339)
 		}
 		m["host"] = match[2]
+	}
+	// Nginx sends an RFC3164 envelope with an escaped JSON message.
+	// Parse JSON before key=value so request paths cannot inject extra fields.
+	message := rfc3164Pattern.ReplaceAllString(body, "")
+	if strings.HasPrefix(message, "logdesk_access: ") {
+		payload := strings.TrimPrefix(message, "logdesk_access: ")
+		e, err := Normalize(json.RawMessage(payload), tenant, now)
+		if err != nil {
+			return model.Event{}, err
+		}
+		e.Raw, _ = json.Marshal(line)
+		return e, nil
 	}
 	for _, match := range kvPattern.FindAllStringSubmatch(body, -1) {
 		if match[1] != "tenant" {

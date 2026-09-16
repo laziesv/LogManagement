@@ -1,0 +1,92 @@
+[
+  {
+    "tenant": "demo-b",
+    "company": "Beacon Retail",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "beacon"
+    ],
+    "source": "api",
+    "event_type": "login_failed",
+    "user": "admin@beacon.example",
+    "host": "beacon-auth01",
+    "src_ip": "198.51.100.202",
+    "action": "login",
+    "severity": 8,
+    "reason": "Repeated incorrect passwords (synthetic sample)",
+    "attempt": 1
+  },
+  {
+    "tenant": "demo-b",
+    "company": "Beacon Retail",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "beacon"
+    ],
+    "source": "api",
+    "event_type": "login_failed",
+    "user": "admin@beacon.example",
+    "host": "beacon-auth01",
+    "src_ip": "198.51.100.202",
+    "action": "login",
+    "severity": 8,
+    "reason": "Repeated incorrect passwords (synthetic sample)",
+    "attempt": 2
+  },
+  {
+    "tenant": "demo-b",
+    "company": "Beacon Retail",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "beacon"
+    ],
+    "source": "api",
+    "event_type": "login_failed",
+    "user": "admin@beacon.example",
+    "host": "beacon-auth01",
+    "src_ip": "198.51.100.202",
+    "action": "login",
+    "severity": 8,
+    "reason": "Repeated incorrect passwords (synthetic sample)",
+    "attempt": 3
+  },
+  {
+    "tenant": "demo-b",
+    "company": "Beacon Retail",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "beacon"
+    ],
+    "source": "api",
+    "event_type": "login_failed",
+    "user": "admin@beacon.example",
+    "host": "beacon-auth01",
+    "src_ip": "198.51.100.202",
+    "action": "login",
+    "severity": 8,
+    "reason": "Repeated incorrect passwords (synthetic sample)",
+    "attempt": 4
+  },
+  {
+    "tenant": "demo-b",
+    "company": "Beacon Retail",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "beacon"
+    ],
+    "source": "api",
+    "event_type": "login_failed",
+    "user": "admin@beacon.example",
+    "host": "beacon-auth01",
+    "src_ip": "198.51.100.202",
+    "action": "login",
+    "severity": 8,
+    "reason": "Repeated incorrect passwords (synthetic sample)",
+    "attempt": 5
+  }
+]

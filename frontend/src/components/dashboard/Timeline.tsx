@@ -1,4 +1,5 @@
 import { Activity } from "lucide-react";
+import { useState } from "react";
 import type { Count } from "../../types/domain";
 import { displayTime, number } from "../../utils/format";
 import { Empty } from "../common/Empty";
@@ -10,6 +11,8 @@ export function Timeline({
   points: Count[];
   loading: boolean;
 }) {
+  const [hovered, setHovered] = useState<number | null>(null);
+  const [focused, setFocused] = useState<number | null>(null);
   if (!points.length)
     return (
       <Empty
@@ -36,6 +39,9 @@ export function Timeline({
       return { name, count: byHour.get(name) || 0 };
     });
   const max = Math.max(...buckets.map((p) => p.count), 1);
+  const cursor = hovered ?? focused;
+  const active = cursor === null ? null : Math.min(cursor, buckets.length - 1);
+  const selected = active === null ? null : buckets[active];
   return (
     <div className="timeline">
       <div className="chart-y">
@@ -48,12 +54,32 @@ export function Timeline({
         <div
           className="bars"
           role="img"
-          aria-label={`Hourly event volume. ${points.map((p) => `${p.name}: ${p.count}`).join("; ")}`}
+          tabIndex={0}
+          onFocus={() => setFocused(0)}
+          onBlur={() => setFocused(null)}
+          onPointerLeave={() => setHovered(null)}
+          onKeyDown={(event) => {
+            if (!["ArrowLeft", "ArrowRight", "Home", "End", "Escape"].includes(event.key)) return;
+            event.preventDefault();
+            setHovered(null);
+            if (event.key === "Escape") {
+              setFocused(null);
+              return;
+            }
+            setFocused((current) => {
+              if (event.key === "Home") return 0;
+              if (event.key === "End") return buckets.length - 1;
+              const step = event.key === "ArrowRight" ? 1 : -1;
+              return Math.max(0, Math.min(buckets.length - 1, (current ?? 0) + step));
+            });
+          }}
+          aria-label={`Use arrow keys to explore hourly event volume. ${points.map((p) => `${p.name}: ${p.count}`).join("; ")}`}
         >
-          {buckets.map((p) => (
+          {buckets.map((p, index) => (
             <div
               key={p.name}
-              title={`${displayTime(p.name)} UTC: ${p.count} events`}
+              className={active === index ? "bar-active" : ""}
+              onPointerEnter={() => setHovered(index)}
               style={{
                 height: `${(p.count / max) * 100}%`,
                 minHeight: p.count ? 3 : 0,
@@ -61,6 +87,17 @@ export function Timeline({
             />
           ))}
         </div>
+        <span className="sr-only" role="status">
+          {focused !== null && selected
+            ? `${displayTime(selected.name)} UTC: ${selected.count} events`
+            : ""}
+        </span>
+        {selected && (
+          <div className="chart-tooltip" aria-hidden="true">
+            <span>{displayTime(selected.name)} UTC</span>
+            <strong>{number(selected.count)} events</strong>
+          </div>
+        )}
         <div className="chart-x">
           <span>
             {new Date(start).toLocaleString(undefined, {

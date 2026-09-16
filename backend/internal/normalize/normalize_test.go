@@ -70,3 +70,27 @@ func TestDecodeBatch(t *testing.T) {
 		}
 	}
 }
+
+func TestNginxAccessSyslog(t *testing.T) {
+	now := time.Date(2026, 9, 15, 12, 0, 0, 0, time.UTC)
+	line := `<190>Sep 15 12:00:00 web01 logdesk_access: {"@timestamp":"2026-09-15T12:00:00Z","source":"network","event_type":"nginx_access","severity":5,"src_ip":"172.18.0.1","host":"web01","http_method":"GET","url":"/missing src_ip=203.0.113.9 tenant=demo-b","status_code":404,"request_time":0.002,"origin":"live"}`
+	e, err := NormalizeSyslog(line, "demo-a", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e.Tenant != "demo-a" || e.SrcIP != "172.18.0.1" || e.EventType != "nginx_access" || e.Source != "network" || e.Severity != 5 || !e.Timestamp.Equal(now) {
+		t.Fatalf("unexpected normalized access log: %+v", e)
+	}
+	if e.Fields["status_code"] != 404 || e.Fields["origin"] != "live" || e.Fields["url"] != "/missing src_ip=203.0.113.9 tenant=demo-b" {
+		t.Fatalf("HTTP fields lost: %+v", e.Fields)
+	}
+	var raw string
+	if json.Unmarshal(e.Raw, &raw) != nil || raw != line {
+		t.Fatal("original Syslog was not preserved")
+	}
+	for _, payload := range []string{`{broken`, `{"tenant":"demo-b"}`, `{"src_ip":"bad-ip"}`} {
+		if _, err := NormalizeSyslog("<190>Sep 15 12:00:00 web01 logdesk_access: "+payload, "demo-a", now); err == nil {
+			t.Fatalf("invalid payload accepted: %s", payload)
+		}
+	}
+}

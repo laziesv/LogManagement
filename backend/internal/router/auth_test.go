@@ -55,9 +55,9 @@ func TestLoginSessionLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := &sessionStore{user: model.User{ID: "admin-a", Email: "admin@demo.local", Tenant: "demo-a", Role: "admin", Hash: string(hash)}}
+	store := &sessionStore{user: model.User{ID: "admin-a", Email: "admin.a@demo.local", Tenant: "demo-a", Role: "admin", Hash: string(hash)}}
 	server := NewServer(store, Config{Origin: "https://logs.example.com", SecureCookies: true})
-	request := httptest.NewRequest("POST", "/api/auth/login", strings.NewReader(`{"email":"ADMIN@demo.local","password":"test-password-123"}`))
+	request := httptest.NewRequest("POST", "/api/auth/login", strings.NewReader(`{"email":"admin.a@demo.local","password":"test-password-123"}`))
 	request.Header.Set("Origin", "https://logs.example.com")
 	request.Header.Set("Content-Type", "application/json")
 	response, err := server.Test(request)

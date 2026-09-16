@@ -1,0 +1,92 @@
+[
+  {
+    "tenant": "demo-a",
+    "company": "Atlas Technology",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "atlas"
+    ],
+    "source": "api",
+    "event_type": "login_failed",
+    "user": "admin@atlas.example",
+    "host": "atlas-auth01",
+    "src_ip": "192.0.2.201",
+    "action": "login",
+    "severity": 8,
+    "reason": "Repeated incorrect passwords (synthetic sample)",
+    "attempt": 1
+  },
+  {
+    "tenant": "demo-a",
+    "company": "Atlas Technology",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "atlas"
+    ],
+    "source": "api",
+    "event_type": "login_failed",
+    "user": "admin@atlas.example",
+    "host": "atlas-auth01",
+    "src_ip": "192.0.2.201",
+    "action": "login",
+    "severity": 8,
+    "reason": "Repeated incorrect passwords (synthetic sample)",
+    "attempt": 2
+  },
+  {
+    "tenant": "demo-a",
+    "company": "Atlas Technology",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "atlas"
+    ],
+    "source": "api",
+    "event_type": "login_failed",
+    "user": "admin@atlas.example",
+    "host": "atlas-auth01",
+    "src_ip": "192.0.2.201",
+    "action": "login",
+    "severity": 8,
+    "reason": "Repeated incorrect passwords (synthetic sample)",
+    "attempt": 3
+  },
+  {
+    "tenant": "demo-a",
+    "company": "Atlas Technology",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "atlas"
+    ],
+    "source": "api",
+    "event_type": "login_failed",
+    "user": "admin@atlas.example",
+    "host": "atlas-auth01",
+    "src_ip": "192.0.2.201",
+    "action": "login",
+    "severity": 8,
+    "reason": "Repeated incorrect passwords (synthetic sample)",
+    "attempt": 4
+  },
+  {
+    "tenant": "demo-a",
+    "company": "Atlas Technology",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "atlas"
+    ],
+    "source": "api",
+    "event_type": "login_failed",
+    "user": "admin@atlas.example",
+    "host": "atlas-auth01",
+    "src_ip": "192.0.2.201",
+    "action": "login",
+    "severity": 8,
+    "reason": "Repeated incorrect passwords (synthetic sample)",
+    "attempt": 5
+  }
+]

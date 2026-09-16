@@ -1,0 +1,122 @@
+[
+  {
+    "tenant": "demo-a",
+    "company": "Atlas Technology",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "atlas"
+    ],
+    "source": "api",
+    "event_type": "login_success",
+    "user": "employee@atlas.example",
+    "host": "atlas-portal",
+    "src_ip": "10.10.1.10",
+    "action": "login",
+    "outcome": "success",
+    "severity": 3
+  },
+  {
+    "tenant": "demo-a",
+    "company": "Atlas Technology",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "atlas"
+    ],
+    "source": "firewall",
+    "event_type": "traffic_denied",
+    "vendor": "demo",
+    "product": "ngfw",
+    "host": "atlas-fw01",
+    "src_ip": "10.10.1.20",
+    "dst_ip": "203.0.113.90",
+    "src_port": 54001,
+    "dst_port": 443,
+    "protocol": "tcp",
+    "action": "deny",
+    "severity": 5
+  },
+  {
+    "tenant": "demo-a",
+    "company": "Atlas Technology",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "atlas"
+    ],
+    "source": "network",
+    "event_type": "link_down",
+    "host": "atlas-router01",
+    "src_ip": "10.10.0.1",
+    "interface": "ge-0/0/1",
+    "severity": 5
+  },
+  {
+    "tenant": "demo-a",
+    "company": "Atlas Technology",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "atlas"
+    ],
+    "source": "crowdstrike",
+    "event_type": "malware_detected",
+    "host": "atlas-workstation01",
+    "user": "atlas-analyst",
+    "process": "powershell.exe",
+    "action": "quarantine",
+    "severity": 8
+  },
+  {
+    "tenant": "demo-a",
+    "company": "Atlas Technology",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "atlas"
+    ],
+    "source": "aws",
+    "eventName": "CreateUser",
+    "eventSource": "iam.amazonaws.com",
+    "recipientAccountId": "111111111111",
+    "awsRegion": "ap-southeast-1",
+    "userIdentity": {
+      "userName": "atlas-cloud-admin"
+    },
+    "sourceIPAddress": "192.0.2.201",
+    "severity": 3
+  },
+  {
+    "tenant": "demo-a",
+    "company": "Atlas Technology",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "atlas"
+    ],
+    "source": "m365",
+    "Operation": "UserLoggedIn",
+    "UserId": "finance@atlas.example",
+    "ClientIP": "192.0.2.201",
+    "Workload": "Exchange",
+    "ResultStatus": "Success",
+    "severity": 3
+  },
+  {
+    "tenant": "demo-a",
+    "company": "Atlas Technology",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "atlas"
+    ],
+    "source": "ad",
+    "EventID": 4624,
+    "TargetUserName": "atlas\\employee",
+    "Computer": "atlas-DC01",
+    "IpAddress": "10.10.1.30",
+    "IpPort": 52000,
+    "severity": 3
+  }
+]

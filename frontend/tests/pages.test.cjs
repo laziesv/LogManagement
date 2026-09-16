@@ -26,6 +26,7 @@ const { AlertsPage } = require("../src/pages/AlertsPage.tsx");
 const { OverviewPage } = require("../src/pages/OverviewPage.tsx");
 const { LogsPage } = require("../src/pages/LogsPage.tsx");
 const { LoginPage } = require("../src/pages/LoginPage.tsx");
+const { LogFilters } = require("../src/components/logs/LogFilters.tsx");
 const noop = () => {};
 function state(admin = true) {
   return {
@@ -121,6 +122,25 @@ test("Overview renders loaded events and empty states without changing page cont
   assert.match(empty, /No events in this view/);
   assert.match(empty, /Your timeline starts with the first event/);
 });
+test("Custom time range renders as a grouped filter panel", () => {
+  const html = render(LogFilters, {
+    ...state(),
+    hours: "custom",
+    customFrom: "2026-09-15T08:00",
+    customTo: "2026-09-15T09:00",
+    setHours: noop,
+    setCustomFrom: noop,
+    setCustomTo: noop,
+    source: "",
+    query: "",
+    setSource: noop,
+    setQuery: noop,
+    setSearch: noop,
+  });
+  assert.match(html, /class="custom-range"/);
+  assert.match(html, /2026-09-15T08:00/);
+  assert.match(html, /2026-09-15T09:00/);
+});
 test("Log page renders event details entry and pagination", () => {
   const html = render(LogsPage, { ...state(), tab: "logs" });
   assert.match(html, /Inspect log 1/);
@@ -138,5 +158,24 @@ test("Login keeps a visible connection error and labeled credentials", () => {
   assert.match(html, /API unavailable: Offline/);
   assert.match(html, /Email address/);
   assert.match(html, /type="password"/);
+  assert.doesNotMatch(html, /admin@demo\.local/);
   assert.match(html, /Retry/);
+});
+
+test("Log details show canonical network/cloud fields and escape untrusted values", () => {
+  const { LogDetails } = require("../src/components/logs/LogDetails.tsx");
+  const event = {
+    ...state().logs[0], tenant: "demo-a", action: "login", host: "server",
+    fields: { src_port: 0, dst_port: 443, http_method: "GET", status_code: 404,
+      outcome: "failure", url: "<script>bad()</script>",
+      cloud: { account_id: "001234567890", region: "test-region", service: "iam" } },
+    raw: {},
+  };
+  const html = renderToStaticMarkup(React.createElement(LogDetails, { event, close: noop }));
+  assert.match(html, /Source port<\/dt><dd>0/);
+  assert.match(html, /HTTP status<\/dt><dd>404/);
+  assert.match(html, /Cloud account<\/dt><dd>001234567890/);
+  assert.match(html, /Outcome<\/dt><dd>failure/);
+  assert.doesNotMatch(html, /<script>/);
+  assert.match(html, /&lt;script&gt;/);
 });

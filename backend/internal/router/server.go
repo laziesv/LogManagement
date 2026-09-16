@@ -23,6 +23,7 @@ func NewServer(store repository.Store, cfg Config) *fiber.App {
 		ErrorHandler: middleware.ErrorHandler,
 	})
 	server.Use(recover.New())
+	server.Use(middleware.AccessLog)
 	server.Use(middleware.Security(cfg.Origin))
 	register(server, handler.New(store, cfg.SecureCookies), store)
 	return server

@@ -1,0 +1,122 @@
+[
+  {
+    "tenant": "demo-b",
+    "company": "Beacon Retail",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "beacon"
+    ],
+    "source": "api",
+    "event_type": "login_success",
+    "user": "employee@beacon.example",
+    "host": "beacon-portal",
+    "src_ip": "10.20.1.10",
+    "action": "login",
+    "outcome": "success",
+    "severity": 3
+  },
+  {
+    "tenant": "demo-b",
+    "company": "Beacon Retail",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "beacon"
+    ],
+    "source": "firewall",
+    "event_type": "traffic_denied",
+    "vendor": "demo",
+    "product": "ngfw",
+    "host": "beacon-fw01",
+    "src_ip": "10.20.1.20",
+    "dst_ip": "203.0.113.90",
+    "src_port": 54001,
+    "dst_port": 443,
+    "protocol": "tcp",
+    "action": "deny",
+    "severity": 5
+  },
+  {
+    "tenant": "demo-b",
+    "company": "Beacon Retail",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "beacon"
+    ],
+    "source": "network",
+    "event_type": "link_down",
+    "host": "beacon-router01",
+    "src_ip": "10.20.0.1",
+    "interface": "ge-0/0/1",
+    "severity": 5
+  },
+  {
+    "tenant": "demo-b",
+    "company": "Beacon Retail",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "beacon"
+    ],
+    "source": "crowdstrike",
+    "event_type": "malware_detected",
+    "host": "beacon-workstation01",
+    "user": "beacon-analyst",
+    "process": "powershell.exe",
+    "action": "quarantine",
+    "severity": 8
+  },
+  {
+    "tenant": "demo-b",
+    "company": "Beacon Retail",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "beacon"
+    ],
+    "source": "aws",
+    "eventName": "CreateUser",
+    "eventSource": "iam.amazonaws.com",
+    "recipientAccountId": "222222222222",
+    "awsRegion": "ap-southeast-1",
+    "userIdentity": {
+      "userName": "beacon-cloud-admin"
+    },
+    "sourceIPAddress": "198.51.100.202",
+    "severity": 3
+  },
+  {
+    "tenant": "demo-b",
+    "company": "Beacon Retail",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "beacon"
+    ],
+    "source": "m365",
+    "Operation": "UserLoggedIn",
+    "UserId": "finance@beacon.example",
+    "ClientIP": "198.51.100.202",
+    "Workload": "Exchange",
+    "ResultStatus": "Success",
+    "severity": 3
+  },
+  {
+    "tenant": "demo-b",
+    "company": "Beacon Retail",
+    "_tags": [
+      "sample",
+      "company-demo",
+      "beacon"
+    ],
+    "source": "ad",
+    "EventID": 4624,
+    "TargetUserName": "beacon\\employee",
+    "Computer": "beacon-DC01",
+    "IpAddress": "10.20.1.30",
+    "IpPort": 52000,
+    "severity": 3
+  }
+]

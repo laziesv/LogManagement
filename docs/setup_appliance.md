@@ -18,7 +18,7 @@ sh run.sh
 
 The script generates a random `.env` only if it does not exist and builds/starts PostgreSQL, backend and frontend. First start needs Internet for container images and dependencies.
 
-Visit http://localhost:8080. Read ADMIN_PASSWORD in .env for admin@demo.local; Viewer accounts use VIEWER_PASSWORD. Do not include .env in the submitted repository.
+Visit http://localhost:8080. Read ADMIN_PASSWORD in .env for admin.a@demo.local and admin.b@demo.local; Viewer accounts use VIEWER_PASSWORD. Do not include .env in the submitted repository.
 
 ```sh
 docker compose ps
@@ -47,7 +47,7 @@ python samples/post_logs.py --alert
 python samples/post_logs.py --file samples/aws.json
 ```
 
-File examples deliberately omit tenant so credentials determine ownership. Omitted timestamps use ingestion time. Files with historical timestamps require a matching UI Custom range (up to 31 days).
+File examples deliberately omit tenant so credentials determine ownership. UI requests use the logged-in session tenant; API-key ingestion uses the tenant bound to `X-API-Key`. A mismatched `tenant` value is rejected instead of allowing cross-tenant writes. Omitted timestamps use ingestion time. Files with historical timestamps require a matching UI Custom range (up to 31 days).
 
 ## Network exposure
 
@@ -73,5 +73,5 @@ npm run dev
 - Docker pipe/daemon unavailable: open Docker Desktop and wait for Engine running. If Docker requests WSL setup, license acceptance or a reboot, complete it on the host.
 - Login invalid: read the initial .env password. Seeds do not update existing users or keys on restart.
 - 403 on writes: match APP_ORIGIN to the browser URL exactly, including scheme and port. Cloud requires COOKIE_SECURE=true.
-- No logs: check source/time/search filters; collector tenant is demo-a. Refresh is manual.
+- No logs: check source/time/search filters and tenant account. Collector tenant is demo-a. Overview and Log explorer auto-refresh every 10 seconds; use the Refresh button for an immediate reload.
 - API unavailable: inspect `docker compose logs backend postgres`; UI does not silently switch to mock data.

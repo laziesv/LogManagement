@@ -17,3 +17,18 @@ export function sample(source: string) {
     action: source === "crowdstrike" ? "quarantine" : "allow",
   };
 }
+
+export function abnormalSamples(count = 5, ip = "192.0.2.150") {
+  return Array.from({ length: count }, (_, index) => ({
+    source: "api",
+    event_type: "login_failed",
+    severity: 8,
+    src_ip: ip,
+    user: "demo-admin",
+    host: "demo-auth-server",
+    action: "login",
+    reason: "Repeated incorrect passwords (synthetic sample)",
+    attempt: index + 1,
+    _tags: ["sample", "suspicious-login"],
+  }));
+}

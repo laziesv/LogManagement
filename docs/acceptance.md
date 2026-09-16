@@ -12,6 +12,7 @@ Implementation is separate from acceptance verification. See verification.md for
 - [x] Dashboard totals, timeline, Top IP/User/EventType
 - [x] Failed-login rule, alert history and acknowledgement
 - [x] Admin/Viewer sessions and tenant-scoped reads/writes
+- [x] Tenant enforcement from session/API key instead of user-selected UI filter
 - [x] Minimum seven-day retention worker
 - [x] Compose packaging, random .env generator, scripts and documentation
 - [x] Unit/HTTP authorization tests and running-stack smoke script

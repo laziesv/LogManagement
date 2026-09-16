@@ -385,6 +385,23 @@ main {
   font-size: 11px;
   padding: 9px;
 }
+.custom-range {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(210px, 1fr));
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dce4e0;
+  border-radius: 8px;
+  background: #fbfdfb;
+  animation: enter-view 180ms ease-out;
+}
+.custom-range label {
+  color: #6f8377;
+}
+.custom-range input {
+  width: 100%;
+}
 .card {
   background: white;
   border: 1px solid #e0e7e2;
@@ -584,6 +601,21 @@ main {
   border-radius: 5px;
   color: #809389;
   font-weight: 500;
+}
+.live-refresh {
+  align-items: center;
+  background: #f7fbf8;
+  border: 1px solid #e4eee7;
+  border-radius: 999px;
+  color: #42564a;
+  display: inline-flex;
+  font-size: 10px;
+  gap: 7px;
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+.live-refresh small {
+  color: #8c9d91;
 }
 .text-button {
   padding: 5px 0;
@@ -1206,6 +1238,10 @@ footer > span:first-child {
   .filters select {
     width: 100%;
   }
+  .custom-range {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
   .card-heading {
     padding: 19px 17px;
   }
@@ -1247,4 +1283,69 @@ footer > span:first-child {
   * {
     transition: none !important;
   }
+}
+
+/* Motion enhances the existing theme without changing the layout. */
+button {
+  transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+button:active:not(:disabled) { transform: scale(.97); }
+input, select { transition: border-color 160ms ease, box-shadow 160ms ease; }
+input:focus, select:focus { border-color: #80b6a5; box-shadow: 0 0 0 3px #80b6a51a; }
+.metric, .source-card, .ranking { transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease; }
+@media (hover: hover) {
+  .metric:hover, .source-card:hover, .ranking:hover {
+    transform: translateY(-3px);
+    border-color: #b7cdbf;
+    box-shadow: 0 8px 22px #293e3010;
+  }
+  .primary:hover:not(:disabled) { box-shadow: 0 4px 12px #24634f24; }
+  nav button:hover:not(:disabled) svg { transform: translateX(2px); }
+}
+nav button svg { transition: transform 180ms ease; }
+.page > .page-heading, .page > .filters, .page > .card,
+.page .metric, .page .ranking, .page .source-card {
+  animation: enter-view 340ms ease-out backwards;
+}
+.page .metric:nth-child(2), .page .ranking:nth-child(2), .page .source-card:nth-child(2) { animation-delay: 45ms; }
+.page .metric:nth-child(3), .page .ranking:nth-child(3), .page .source-card:nth-child(3) { animation-delay: 90ms; }
+.page .metric:nth-child(4) { animation-delay: 135ms; }
+.notice, .error { animation: enter-view 220ms ease-out; }
+.log-dialog[open] { animation: open-details 200ms ease-out; }
+.log-dialog[open]::backdrop { animation: fade-in 200ms ease-out; }
+.bars > div {
+  transform-origin: bottom;
+  animation: grow-bar 450ms cubic-bezier(.2,.7,.3,1) backwards;
+  transition: height 300ms ease, background 160ms ease;
+}
+.bars > div.bar-active { background: #306e50; }
+.bars:focus-visible { outline: 2px solid #80b6a5; outline-offset: 5px; border-radius: 3px; }
+.chart-tooltip {
+  position: absolute;
+  z-index: 2;
+  top: 7px;
+  right: 8px;
+  max-width: calc(100% - 16px);
+  padding: 10px 13px;
+  border: 1px solid #41594b;
+  border-radius: 8px;
+  color: #f2faf5;
+  background: #1c2e27f5;
+  box-shadow: 0 4px 16px #16251d20;
+  pointer-events: none;
+  animation: fade-in 120ms ease-out;
+}
+.chart-tooltip span { display: block; font-size: 10px; color: #b9ccbf; }
+.chart-tooltip strong { display: block; margin-top: 4px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.rank-track span { transform-origin: left; animation: grow-rank 450ms ease-out backwards; }
+tbody tr { transition: background 150ms ease; }
+@keyframes enter-view { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes open-details { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes grow-bar { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes grow-rank { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .metric:hover, .source-card:hover, .ranking:hover,
+  button:active:not(:disabled), nav button:hover:not(:disabled) svg { transform: none; }
 }

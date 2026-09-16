@@ -7,7 +7,7 @@ Go 1.25+. Run `go test ./...` and `go vet ./...`.
 - `internal/config`: environment defaults and validation.
 - `internal/bootstrap`: database initialization, dependency wiring, HTTP startup and graceful shutdown.
 - `internal/collector`: UDP/TCP Syslog listeners and connection lifecycle.
-- `internal/retention`: immediate/hourly cleanup worker.
+- `internal/retention`: cleanup worker that runs immediately on startup and then every 1 minute in the current demo/test configuration.
 
 - `internal/router`: Fiber server setup and the endpoint table in `routes.go`.
 - `internal/handler`: named HTTP handlers, grouped by auth, ingest, logs, alerts and health.

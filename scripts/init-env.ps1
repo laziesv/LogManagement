@@ -21,4 +21,4 @@ $lines = @(
   'SYSLOG_BIND=127.0.0.1'
 )
 [IO.File]::WriteAllLines($envPath, $lines)
-Write-Host 'Created .env with random credentials. Read ADMIN_PASSWORD in .env to sign in as admin@demo.local.'
+Write-Host 'Created .env with random credentials. Read ADMIN_PASSWORD in .env to sign in as admin.a@demo.local.'

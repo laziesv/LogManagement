@@ -12,4 +12,4 @@ secret() { openssl rand -hex "$1"; }
  printf 'API_KEY_B=%s\n' "$(secret 32)"
  printf 'APP_ORIGIN=http://localhost:8080\nCOOKIE_SECURE=false\nRETENTION_DAYS=7\nHTTP_BIND=127.0.0.1\nSYSLOG_BIND=127.0.0.1\n'
 } > .env
-echo 'Created .env. Read ADMIN_PASSWORD to sign in as admin@demo.local.'
+echo 'Created .env. Read ADMIN_PASSWORD to sign in as admin.a@demo.local.'

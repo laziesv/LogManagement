@@ -67,7 +67,7 @@ export function LogFilters() {
         </select>
       </label>
       {hours === "custom" && (
-        <>
+        <div className="custom-range">
           <label>
             From
             <input
@@ -90,7 +90,7 @@ export function LogFilters() {
               }}
             />
           </label>
-        </>
+        </div>
       )}
     </div>
   );

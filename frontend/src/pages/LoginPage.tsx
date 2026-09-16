@@ -15,7 +15,7 @@ export function LoginPage({
   connectionError: string;
   retry: () => void;
 }) {
-  const [email, setEmail] = useState("admin@demo.local"),
+  const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);

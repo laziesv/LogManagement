@@ -14,7 +14,7 @@ flowchart LR
   Detect --> Alerts[(Alerts table)]
   API --> DB
   API --> Alerts
-  Cleanup[Hourly retention worker] --> DB
+  Cleanup[Retention worker] --> DB
 ```
 
 ## Design decisions
@@ -29,7 +29,8 @@ flowchart LR
 
 ## Tenant and authorization model
 
-- Tenant belongs to a trusted session user or hashed API key, never to a user-selected header alone.
+- Tenant is enforced by the backend from a trusted session user or hashed API key, never from a user-selected UI filter or arbitrary header alone.
+- Browser reads use the tenant stored on the logged-in session. API ingestion uses the tenant bound to the `X-API-Key`. If a request includes a `tenant` value that does not match the authenticated tenant, the backend rejects it instead of switching scope.
 - Users, logs, API keys, rules and alerts have a tenant. All read/write repository calls scope by the authenticated tenant.
 - Admin is a tenant administrator, not a cross-tenant superuser. Viewer only reads. Data is in shared tables; dedicated table/index per tenant is not implemented.
 - Syslog is unauthenticated: its receiver has one fixed SYSLOG_TENANT. Bind it to loopback by default. For remote devices use a private network and source-IP firewall allowlist; deploy a separate collector mapping for another tenant.
@@ -47,7 +48,7 @@ flowchart LR
 
 ## Retention and operational limits
 
-- Hourly delete of logs older than RETENTION_DAYS, minimum 7, based on ingested_at. Historical samples are retained at least seven days after import. Cleanup also deletes expired sessions.
+- Cleanup runs once on backend startup and then every 1 minute in the current demo/test configuration. It deletes logs older than RETENTION_DAYS, minimum 7, based on ingested_at. Historical samples are retained at least seven days after import. Cleanup also deletes expired sessions.
 - Alerts persist until a future explicit policy is added. Volume backups and monitoring are operator responsibilities.
 - UDP is best effort with no acknowledgement; no durable queue. TCP uses newline framing and a 64 KB maximum line. Connection count is capped at 32; idle connections expire after 30 seconds.
 - No deduplication: resend means another event. No production throughput or latency claim until real-load validation.
