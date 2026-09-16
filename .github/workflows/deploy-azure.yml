@@ -12,22 +12,16 @@ jobs:
     name: Deploy over SSH
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Start SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.AZURE_SSH_KEY }}
-
-      - name: Trust Azure host key
+      - name: Prepare SSH key
         run: |
           mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.AZURE_SSH_KEY }}" > ~/.ssh/azure_vm
+          chmod 600 ~/.ssh/azure_vm
           ssh-keyscan -H "${{ secrets.AZURE_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Pull and restart stack
         run: |
-          ssh "${{ secrets.AZURE_USER }}@${{ secrets.AZURE_HOST }}" <<'EOF'
+          ssh -i ~/.ssh/azure_vm "${{ secrets.AZURE_USER }}@${{ secrets.AZURE_HOST }}" <<'EOF'
           set -eu
           cd "$HOME/LogManagement"
           git fetch origin main
