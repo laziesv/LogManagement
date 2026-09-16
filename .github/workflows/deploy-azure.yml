@@ -1,6 +1,8 @@
 ﻿name: Deploy to Azure VM
 
 on:
+  push:
+    branches: [deploy]
   workflow_dispatch:
 
 concurrency:
@@ -24,8 +26,8 @@ jobs:
           ssh -i ~/.ssh/azure_vm "${{ secrets.AZURE_USER }}@${{ secrets.AZURE_HOST }}" <<'EOF'
           set -eu
           cd "$HOME/LogManagement"
-          git fetch origin main
-          git reset --hard origin/main
+          git fetch origin deploy
+          git reset --hard origin/deploy
           docker compose up -d --build
           docker compose ps
           EOF

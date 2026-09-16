@@ -1,6 +1,6 @@
 # CI/CD
 
-โปรเจกต์นี้ใช้ GitHub Actions สำหรับตรวจ build/test อัตโนมัติ และ deploy ไป Azure VM แบบกดรันเอง
+โปรเจกต์นี้ใช้ GitHub Actions สำหรับตรวจ build/test อัตโนมัติ และ deploy ไป Azure VM ผ่าน branch `deploy`
 
 ## CI
 
@@ -28,13 +28,13 @@ CI ทำงานเมื่อ push หรือเปิด pull request เ
 .github/workflows/deploy-azure.yml
 ```
 
-workflow นี้เป็นแบบ manual trigger ผ่าน GitHub Actions tab เพื่อกัน deploy ทุกครั้งที่ push
+workflow นี้ deploy อัตโนมัติเมื่อ push เข้า branch `deploy` และยังสามารถกดรันเองผ่าน GitHub Actions tab ได้
 
 สิ่งที่ workflow ทำ:
 
 1. SSH เข้า Azure VM
 2. เข้า directory `$HOME/LogManagement`
-3. pull code ล่าสุดจาก `origin/main`
+3. pull code ล่าสุดจาก `origin/deploy`
 4. รัน `docker compose up -d --build`
 5. แสดง `docker compose ps`
 
@@ -86,7 +86,26 @@ docker ps
 sudo usermod -aG docker $USER
 ```
 
-## วิธี deploy
+## วิธี deploy ผ่าน branch
+
+หลังจาก CI บน `main` ผ่านแล้ว ให้ merge หรือ fast-forward branch `deploy` ไปที่ commit ที่ต้องการ deploy:
+
+```sh
+git checkout deploy
+git merge main
+git push origin deploy
+```
+
+เมื่อ push เข้า `deploy` แล้ว GitHub Actions จะ deploy ไป Azure VM อัตโนมัติ
+
+ถ้ายังไม่มี branch `deploy` ให้สร้างจาก `main`:
+
+```sh
+git checkout -b deploy main
+git push -u origin deploy
+```
+
+## วิธี deploy แบบ manual
 
 ใน GitHub:
 
