@@ -36,7 +36,7 @@ export function LoginPage({
       <section className="login-story">
         <Brand />
         <div>
-          <span className="eyebrow">YOUR ENVIRONMENT</span>
+          <span className="eyebrow">YOUR ENVIRONMENT, IN FOCUS</span>
           <h1>
             Every event.
             <br />
