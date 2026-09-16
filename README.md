@@ -96,7 +96,7 @@ python tests/smoke.py
 
 Smoke test ต้องมี stack รันอยู่และ `.env` จริง จะเพิ่มข้อมูลทดสอบใน demo tenants และทดสอบ alert โดยคืนค่ากฎเดิมหลังจบ
 
-เอกสารส่งมอบหลักอยู่ที่ [สถาปัตยกรรม](docs/architecture.md), [ติดตั้ง Appliance](docs/setup_appliance.md) และ [ติดตั้ง SaaS](docs/setup_saas.md)
+เอกสารส่งมอบหลักอยู่ที่ [สถาปัตยกรรม](docs/architecture.md), [ติดตั้ง Appliance](docs/setup_appliance.md), [ติดตั้ง SaaS](docs/setup_saas.md) และ [CI/CD](docs/cicd.md)
 
 Postman/Insomnia collection สำหรับทดสอบ API อยู่ที่ [docs/postman_collection.json](docs/postman_collection.json) และวิธีใช้อยู่ที่ [docs/postman.md](docs/postman.md) หลัง import ให้ตั้งค่า `admin_password`, `api_key_a` และ `api_key_b` จาก `.env`
 
