@@ -1,6 +1,6 @@
 # CI/CD
 
-โปรเจกต์นี้ใช้ GitHub Actions สำหรับตรวจ build/test และ deploy ไป Azure VM แบบกดรันเอง
+โปรเจกต์นี้ใช้ GitHub Actions สำหรับตรวจ build/test อัตโนมัติ และ deploy ไป Azure VM แบบกดรันเอง
 
 ## CI
 
