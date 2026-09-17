@@ -50,7 +50,7 @@ export function OverviewPage() {
         <div className="card chart-card">
           <div className="card-heading">
             <div>
-              <h2>Event activity</h2>
+              <h2>Event activity _TH</h2>
               <p>Hourly event volume · UTC</p>
             </div>
             <span className="chart-legend">
