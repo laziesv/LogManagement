@@ -1,195 +1,73 @@
-# สถาปัตยกรรมระบบ Logdesk
-
-Logdesk เป็นระบบจัดการ log แบบ multi tenant สำหรับรับ log หลายช่องทาง ค้นหา วิเคราะห์ แจ้งเตือน และแสดงผลผ่านเว็บ UI ระบบรองรับทั้งโหมด Appliance ที่รันด้วย Docker Compose และโหมด SaaS demo ผ่าน HTTPS บน Azure VM
-
-## ภาพรวมระบบ
+# สถาปัตยกรรม
 
 ```mermaid
 flowchart LR
-  User[Admin / Viewer] -->|HTTPS| Nginx[Nginx Reverse Proxy]
-  Nginx --> Frontend[React Frontend]
-  Frontend -->|Session Cookie| API[Go Fiber Backend API]
-
-  HTTP[HTTP JSON POST /ingest] -->|X-API-Key| API
-  File[File Batch Import] --> API
-  Syslog[Syslog TCP/UDP :5514] --> Collector[Syslog Collector]
-
-  API --> Normalize[Normalization Pipeline]
+  Browser[React browser] -->|same-origin HTTPS on cloud| Proxy[Nginx]
+  Proxy --> API[Go Fiber API]
+  JSON[HTTP JSON / Python simulator] -->|tenant API key| API
+  Files[JSON batch upload] --> API
+  Devices[Firewall / Network] -->|UDP or newline TCP| Collector[Go Syslog listener]
+  API --> Normalize[Shared normalization]
   Collector --> Normalize
-  Normalize --> Store[(PostgreSQL)]
-
-  Store --> Dashboard[Dashboard / Log Explorer]
-  Store --> Alert[Alert Engine]
-  Alert --> AlertUI[Alert UI]
-
-  Retention[Retention Worker] -->|delete old logs| Store
-  GitHub[GitHub Actions] -->|SSH deploy| Azure[Azure VM]
-  Azure --> Nginx
+  Normalize --> DB[(PostgreSQL / JSONB)]
+  DB --> Detect[Failed-login rule in ingest transaction]
+  Detect --> Alerts[(Alerts table)]
+  API --> DB
+  API --> Alerts
+  Cleanup[Retention worker] --> DB
 ```
 
-## Component หลัก
+## เหตุผลการออกแบบ
 
-| ส่วน | หน้าที่ |
-|---|---|
-| React Frontend | หน้า Login, Dashboard, Log Explorer, Alerts และ Data Source |
-| Nginx | Serve frontend และ reverse proxy ไป backend ในโหมด SaaS HTTPS |
-| Go Fiber Backend | REST API, authentication, RBAC, ingest, search, dashboard, alert และ retention worker |
-| Syslog Collector | รับ Syslog TCP/UDP ที่ port 5514 แล้วส่งเข้า normalization pipeline |
-| PostgreSQL | เก็บ users, API keys, events, alert rules, alert history และ sessions |
-| GitHub Actions | รัน CI และ deploy ไป Azure VM ผ่าน SSH เมื่อ push เข้า branch `deploy` |
+- Frontend เป็น React ที่ build ด้วย Vite ส่วน backend ใช้ Go Fiber
+- backend binary ตัวเดียวดูแล HTTP API, Syslog UDP/TCP listener และ retention cleanup เพื่อติดตั้งแบบ appliance ได้ง่าย
+- ฟังก์ชัน normalize ใช้ร่วมกันทั้ง HTTP ingest และ Syslog โดยแปลง provider ต่าง ๆ ให้มี field กลาง เช่น `timestamp`, `tenant`, `source`, `event_type`, `severity`, `src_ip`, `user`, `host`, `action`
+- payload เดิมถูกเก็บใน `raw` และ field เสริมถูกเก็บใน `fields` แบบ JSONB
+- AWS `Records` envelope ถูกแกะออกก่อน normalize, API failed login และ AD 4625 map เป็น `login_failed`, M365/AWS field สำคัญถูก map เป็น field กลาง
+- ถ้า log ไม่มี timestamp จะใช้เวลารับเข้าแทน ถ้า timestamp, severity, IP หรือ tenant ไม่ถูกต้อง ระบบจะ reject
+- RFC3164 Syslog จะสมมติ timezone เป็น UTC และ infer ปีปัจจุบัน มี tolerance เวลาอนาคต 5 นาทีสำหรับ clock skew
+- batch ทุก record ถูก validate ก่อนเริ่ม transaction ถ้ามี record ใดผิด batch ทั้งก้อนจะไม่ถูก insert จำกัด 1,000 records และ 2 MB
+- PostgreSQL ใช้ transaction, index ตาม tenant/time/source และ JSONB สำหรับ field ที่ต่างกันตาม provider การค้นหาปัจจุบันเป็น substring search บน field ที่ scoped แล้ว เหมาะกับ demo ขนาดเล็ก
 
-## ช่องทางรับ log
+## Tenant และสิทธิ์การใช้งาน
 
-ระบบรับ log ได้ 3 รูปแบบหลัก
-
-1. **HTTP JSON**
-   - ใช้ endpoint `POST /ingest`
-   - ระบุ tenant ผ่าน `X-API-Key`
-   - เหมาะกับ Postman, script และ integration ที่ส่ง JSON ได้
-
-2. **Syslog TCP/UDP**
-   - รับที่ port `5514`
-   - TCP ใช้ newline framing
-   - UDP เป็น best effort ไม่มี acknowledgement
-   - Syslog ไม่มี authentication ในตัว ระบบจึงใช้ค่า `SYSLOG_TENANT` จาก config เพื่อกำหนด tenant ของ collector
-
-3. **File batch import**
-   - ใช้ import sample log เช่น AWS, Microsoft 365 และ Active Directory
-   - ระบบ normalize record แต่ละรายการก่อนบันทึก
-
-## Normalization
-
-Normalization pipeline แปลง log จากหลาย source ให้เป็น field กลาง เพื่อให้ค้นหาและแสดง dashboard แบบเดียวกันได้
-
-Field กลางที่ใช้บ่อย ได้แก่
-
-- `tenant`
-- `source`
-- `event_type`
-- `severity`
-- `src_ip`
-- `username`
-- `host`
-- `action`
-- `timestamp`
-- `raw`
-- `fields`
-
-ถ้า log ไม่มี `timestamp` ระบบใช้เวลาที่ ingest เข้ามาแทน เพื่อให้ log แสดงใน timeline และ filter ตามเวลาได้
-
-## Tenant isolation และ RBAC
-
-ระบบใช้ shared database tables แต่ทุก record มี `tenant` กำกับ และ backend enforce tenant ทุก request
-
-| ช่องทาง | วิธีกำหนด tenant |
-|---|---|
-| Browser UI | ใช้ tenant จาก session หลัง login |
-| HTTP ingest | ใช้ tenant ที่ผูกกับ `X-API-Key` |
-| Syslog | ใช้ค่า `SYSLOG_TENANT` จาก config |
-
-หลักการสำคัญคือ UI ไม่ให้ผู้ใช้เลือก tenant เอง เพราะ tenant ต้องถูกบังคับจาก backend เท่านั้น
-
-Role ที่มีในระบบ
-
-- **Admin**: จัดการข้อมูลภายใน tenant ของตัวเอง เช่น ดู log, สร้าง alert rule และ acknowledge alert
-- **Viewer**: อ่านข้อมูลได้เฉพาะ tenant ของตัวเอง
-
-Admin ในระบบนี้เป็น admin ระดับ tenant ไม่ใช่ super admin ข้าม tenant
-
-## Authentication และ Security
-
-- Password ใช้ bcrypt
-- Session token เป็นค่าสุ่มและเก็บเป็น hash ใน database
-- API key ถูก hash ก่อนเก็บใน database
-- Session cookie ใช้ `HttpOnly` และ `SameSite=Strict`
-- เมื่อ deploy ผ่าน HTTPS ระบบตั้ง cookie แบบ `Secure`
-- Request ที่แก้ข้อมูลผ่าน cookie ต้องมี `Origin` ตรงกับ `APP_ORIGIN`
+- backend enforce tenant จาก session user หรือ API key ที่ authenticate แล้วเท่านั้น ไม่ให้ user เลือก tenant จาก UI filter หรือ header เอง
+- การอ่านผ่าน browser ใช้ tenant จาก session หลัง login
+- การ ingest ผ่าน HTTP API ใช้ tenant ที่ผูกกับ `X-API-Key`
+- ถ้า request ส่งค่า `tenant` มาไม่ตรงกับ session/API key ระบบจะ reject ไม่สลับ tenant ให้
+- users, logs, API keys, rules และ alerts มี tenant กำกับ และ repository ทุกจุด query ด้วย tenant ที่ authenticate แล้ว
+- Admin เป็น admin เฉพาะ tenant ของตัวเอง ไม่ใช่ super admin ข้าม tenant
+- Viewer อ่านได้อย่างเดียว
+- ตาราง DB เป็น shared tables พร้อม tenant column ยังไม่ได้แยก table/index ต่อ tenant
+- Syslog ไม่มี authentication จึงใช้ `SYSLOG_TENANT` จาก config และ bind loopback เป็นค่าเริ่มต้น ถ้ารับจากอุปกรณ์จริงควรใช้ private network และ firewall allowlist
+- password ใช้ bcrypt, session token สุ่ม 256-bit อายุ 8 ชั่วโมง และเก็บเฉพาะ SHA-256 hash ใน DB
+- API key ถูก hash ก่อนเก็บใน DB เช่นกัน
+- session cookie เป็น HttpOnly/SameSite=Strict และใช้ Secure เมื่อ deploy แบบ HTTPS
+- request ที่แก้ข้อมูลด้วย cookie ต้องมี `Origin` ตรงกับ `APP_ORIGIN`
+- seed ตอน startup จะเพิ่มเฉพาะ tenant/user demo ที่ยังไม่มีอยู่ การเปลี่ยนค่า `.env` ภายหลังจะไม่ rotate password/API key เดิมใน DB
 
 ## Alert
 
-ตอนนี้ระบบมีเงื่อนไข alert หลักเพียงแบบเดียว คือแจ้งเตือนเมื่อพบ log field ที่ rule กำหนดติดต่อกันครบ **5 ครั้งภายใน 5 นาที** ภายใน tenant เดียวกัน
+- กฎเริ่มต้นคือ `login_failed` จาก `src_ip` เดียวกันตั้งแต่ 5 ครั้งขึ้นไป ภายใน 5 นาที ตาม event time
+- การนับและ cooldown แยกตาม tenant
+- ตอน ingest จะ lock tenant row ใน transaction เพื่อลดโอกาสสร้าง alert ซ้ำจาก batch ที่เข้าพร้อมกัน
+- เฉพาะ log ที่ ingest ใหม่เท่านั้นที่ trigger alert; historical replay นอกหน้าต่างเวลาไม่ trigger
+- alert ถูกบันทึกใน transaction เดียวกับ logs
+- UI แสดง alert และให้ Admin acknowledge ได้
+- ยังไม่มี Email/Webhook delivery
+- การเปลี่ยน rule มีผลกับ ingestion ถัดไป
 
-ตัวอย่างที่ใช้ทดสอบใน demo คือ failed login จาก IP เดียวกัน 5 ครั้งภายใน 5 นาที แล้วระบบสร้าง alert history และแสดงผลในหน้า Alert UI
+## Retention และข้อจำกัดเชิงปฏิบัติการ
 
-หลักการทำงานปัจจุบัน
-
-- ตรวจเฉพาะ log ที่ ingest เข้ามาใหม่
-- นับภายใน tenant เดียวกันเท่านั้น
-- ใช้ time window 5 นาที
-- ครบ 5 ครั้งจึงสร้าง alert
-- Admin สามารถ acknowledge alert ได้ใน UI
-
-ตอนนี้ระบบรองรับการแจ้งเตือนผ่าน UI เป็นหลัก ยังไม่มี email หรือ webhook delivery
-
-## Retention
-
-Retention worker ทำงานใน backend เพื่อกำหนดอายุข้อมูลขั้นต่ำตามโจทย์
-
-- ค่า retention ขั้นต่ำคือ 7 วัน ผ่าน `RETENTION_DAYS`
-- ระบบลบ log ที่ `ingested_at` เก่ากว่า retention policy
-- ใช้ `ingested_at` แทน `timestamp` เพื่อให้ historical samples ที่ import เข้ามายังอยู่ครบตามวันที่ ingest
-- ตอนนี้ตั้ง interval เป็น 1 นาทีเพื่อสะดวกต่อการ demo/test
-- worker ล้าง expired sessions ด้วย
-
-## Deployment
-
-### Appliance mode
-
-ใช้สำหรับรันระบบบนเครื่องเดียวหรือ VM ด้วย Docker Compose
-
-```powershell
-docker compose up --build -d
-```
-
-Service หลักใน Docker Compose
-
-- frontend
-- backend
-- postgres
-
-### SaaS mode
-
-ระบบ demo deploy บน Azure VM และเข้าใช้งานผ่าน HTTPS
-
-```text
-https://logdisk.malaysiawest.cloudapp.azure.com
-```
-
-Port ที่ใช้
-
-| Port | ใช้สำหรับ |
-|---|---|
-| 80 | HTTP / Certbot challenge |
-| 443 | HTTPS web app |
-| 5514 TCP | Syslog TCP |
-| 5514 UDP | Syslog UDP |
-
-## CI/CD
-
-ใช้ GitHub Actions แยกเป็น 2 workflow
-
-1. **CI**
-   - รันบน push/PR ไป `main`
-   - ตรวจ Go test, Go vet, frontend build และ Docker Compose config
-
-2. **Deploy**
-   - รันเมื่อ push เข้า branch `deploy`
-   - SSH เข้า Azure VM
-   - pull code ล่าสุด
-   - rebuild และ restart container ด้วย Docker Compose
-
-Secrets ที่ใช้ใน GitHub Actions
-
-- `AZURE_HOST`
-- `AZURE_USER`
-- `AZURE_SSH_KEY`
-
-## ข้อจำกัดปัจจุบัน
-
-- Syslog ไม่มี authentication จึงควรเปิดรับผ่าน firewall allowlist หรือ private network ใน production
-- UDP อาจสูญหายได้ตามธรรมชาติของ protocol
-- ยังไม่มี durable queue สำหรับ log ingestion
-- ยังไม่มี email/webhook delivery สำหรับ alert
+- cleanup ทำงานทันที 1 รอบตอน backend start และหลังจากนั้นทุก 1 นาทีใน config สำหรับ demo/test ตอนนี้
+- retention ลบ logs ที่ `ingested_at` เก่ากว่า `RETENTION_DAYS` โดยขั้นต่ำคือ 7 วัน
+- ใช้ `ingested_at` แทน `timestamp` เพื่อให้ historical samples อยู่ในระบบอย่างน้อย 7 วันหลัง import
+- cleanup ลบ expired sessions ด้วย
+- alerts ยังไม่มี retention policy แยก
+- operator ต้องดูแล backup volume และ disk usage เอง
+- UDP เป็น best effort ไม่มี acknowledgement และไม่มี durable queue
+- TCP ใช้ newline framing จำกัด 64 KB ต่อ line จำกัด connection 32 และ idle timeout 30 วินาที
+- ไม่มี deduplication ถ้าส่งซ้ำจะเป็น event ใหม่
 - ยังไม่มี benchmark throughput/latency สำหรับ production load
 
 ## Diagram สำหรับนำเสนอ

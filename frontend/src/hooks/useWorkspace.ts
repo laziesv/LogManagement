@@ -29,14 +29,20 @@ export function useWorkspace(user: User, onLogout: () => void) {
     [selected, setSelected] = useState<LogEvent | null>(null),
     [updated, setUpdated] = useState("");
   const fileInput = useRef<HTMLInputElement>(null),
-    controller = useRef<AbortController | null>(null);
+    controller = useRef<AbortController | null>(null),
+    actionInProgress = useRef(false);
   const isAdmin = user.role === "admin";
   const load = useCallback(async (options?: { silent?: boolean }) => {
+    if (
+      options?.silent &&
+      (controller.current || actionInProgress.current || document.hidden)
+    )
+      return;
     controller.current?.abort();
     const ac = new AbortController();
     controller.current = ac;
     if (!options?.silent) setBusy(true);
-    setError("");
+    if (!options?.silent) setError("");
     const to = hours === "custom" ? new Date(customTo) : new Date(),
       from =
         hours === "custom"
@@ -48,6 +54,7 @@ export function useWorkspace(user: User, onLogout: () => void) {
       from > to ||
       to.getTime() - from.getTime() > 31 * 86400000
     ) {
+      controller.current = null;
       if (!options?.silent) {
         setError("Choose a valid time range of up to 31 days.");
         setBusy(false);
@@ -62,6 +69,10 @@ export function useWorkspace(user: User, onLogout: () => void) {
       limit: "50",
       offset: String(offset),
     });
+    const timeout = window.setTimeout(
+      () => ac.abort(new DOMException("Request timed out", "TimeoutError")),
+      30000,
+    );
     try {
       const [l, s, a, r] = await Promise.all([
         logsApi.list(params, ac.signal),
@@ -75,13 +86,20 @@ export function useWorkspace(user: User, onLogout: () => void) {
       setStats(s);
       setAlerts(a);
       setRule(r);
+      setError("");
       setUpdated(new Date().toLocaleTimeString());
     } catch (e) {
-      if (ac.signal.aborted) return;
-      if (e instanceof APIError && e.status === 401) onLogout();
+      if (ac.signal.aborted && ac.signal.reason?.name !== "TimeoutError") return;
+      if (ac.signal.reason?.name === "TimeoutError")
+        setError("Loading took too long. Check the connection and try Refresh.");
+      else if (e instanceof APIError && e.status === 401) onLogout();
       else setError(errorText(e));
     } finally {
-      if (!ac.signal.aborted) setBusy(false);
+      window.clearTimeout(timeout);
+      if (controller.current === ac) {
+        controller.current = null;
+        setBusy(false);
+      }
     }
   }, [source, hours, customFrom, customTo, search, offset, onLogout]);
   useEffect(() => {
@@ -93,6 +111,8 @@ export function useWorkspace(user: User, onLogout: () => void) {
     return () => window.clearInterval(id);
   }, [load]);
   async function action(fn: () => Promise<unknown>, message: string) {
+    controller.current?.abort();
+    actionInProgress.current = true;
     setActionBusy(true);
     setError("");
     setNotice("");
@@ -103,6 +123,7 @@ export function useWorkspace(user: User, onLogout: () => void) {
     } catch (e) {
       setError(errorText(e));
     } finally {
+      actionInProgress.current = false;
       setActionBusy(false);
     }
   }

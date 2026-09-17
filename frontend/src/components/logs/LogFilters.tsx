@@ -31,7 +31,14 @@ export function LogFilters() {
           aria-label="Search logs"
           placeholder="Search events, IPs, users…"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            setQuery(value);
+            if (value === "") {
+              setOffset(0);
+              setSearch("");
+            }
+          }}
         />
         <button type="submit">Search</button>
       </form>
