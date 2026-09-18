@@ -119,6 +119,17 @@ func TestAdminIngest(t *testing.T) {
 	f := &fakeStore{role: "admin"}
 	s := NewServer(f, Config{Origin: "http://localhost:8080"})
 	body, _ := json.Marshal(map[string]any{"source": "api", "@timestamp": time.Now().UTC().Format(time.RFC3339)})
+	foreign := httptest.NewRequest("POST", "/api/ingest", strings.NewReader(string(body)))
+	foreign.Header.Set("Cookie", "session=valid")
+	foreign.Header.Set("Origin", "https://other.example")
+	foreignResponse, err := s.Test(foreign)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foreignResponse.Body.Close()
+	if foreignResponse.StatusCode != 403 || len(f.inserted) != 0 {
+		t.Fatal("cross-origin admin write was accepted")
+	}
 	req := httptest.NewRequest("POST", "/api/ingest", strings.NewReader(string(body)))
 	req.Header.Set("Cookie", "session=valid")
 	req.Header.Set("Origin", "http://localhost:8080")
